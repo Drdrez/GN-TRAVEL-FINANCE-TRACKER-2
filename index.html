@@ -17,7 +17,7 @@
             --text-light: #64748b;
         }
 
-        /* --- STATIC BACKGROUND (Needed for Glass effect) --- */
+        /* --- STATIC BACKGROUND --- */
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 50%, #f5f3ff 100%);
@@ -64,33 +64,47 @@
         /* Table Styles */
         th, td { white-space: nowrap; }
         
-        /* Editable Inputs */
-        td[contenteditable="true"], th[contenteditable="true"], select.editable-input {
+        /* --- EDITABLE INPUTS & DROPDOWNS (OPTIMIZED) --- */
+        td[contenteditable="true"], th[contenteditable="true"], select.editable-input, input.editable-input {
             background-color: transparent;
             cursor: text;
             transition: all 0.2s;
             outline: none;
             border: 1px dashed transparent;
             width: 100%;
-            /* Heavily padded right to avoid arrow overlap */
-            padding: 6px 3rem 6px 10px; 
             border-radius: 6px;
+            /* SMALLER FONT FOR BETTER FIT */
+            font-size: 0.75rem !important; /* 12px */
+            font-weight: 500;
+        }
+
+        /* Specific Dropdown Styling */
+        select.editable-input {
+            /* Reduced right padding to 1.75rem (approx 28px) - enough for arrow, but gives more space for text */
+            padding: 6px 1.75rem 6px 8px; 
             text-overflow: ellipsis;
             white-space: nowrap;
             overflow: hidden;
-            line-height: 1.5;
+            line-height: 1.25;
+            appearance: none; /* Reset native appearance to ensure consistent spacing */
+            background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
+            background-position: right 0.2rem center;
+            background-repeat: no-repeat;
+            background-size: 1.25em 1.25em;
         }
         
-        /* Reset padding for simple text inputs */
+        /* Text Input Styling */
         td[contenteditable="true"], th[contenteditable="true"], input.editable-input {
-             padding: 6px 10px;
+             padding: 6px 8px;
         }
 
-        td[contenteditable="true"]:hover, th[contenteditable="true"]:hover {
+        td[contenteditable="true"]:hover, th[contenteditable="true"]:hover, 
+        select.editable-input:hover, input.editable-input:hover {
             background-color: rgba(255,255,255,0.8);
             border: 1px dashed #cbd5e1;
         }
-        td[contenteditable="true"]:focus, th[contenteditable="true"]:focus {
+        td[contenteditable="true"]:focus, th[contenteditable="true"]:focus,
+        select.editable-input:focus, input.editable-input:focus {
             background-color: white;
             border: 1px solid var(--primary-blue);
             box-shadow: 0 0 0 2px rgba(52, 176, 229, 0.1);
