@@ -1,0 +1,1683 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GN TRAVEL MARKETING LLC FINANCE TRACKER</title>
+    <!-- Chart.js Library -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Tailwind CSS for layout utilities -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        :root {
+            --primary-blue: #34b0e5;
+            --bg-color: #f4f7f9;
+            --text-dark: #333;
+            --text-light: #777;
+            --card-shadow: 0 4px 6px rgba(0,0,0,0.05);
+        }
+
+        body {
+            background-color: var(--bg-color);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        /* Custom Scrollbar */
+        .custom-scrollbar::-webkit-scrollbar { height: 8px; width: 8px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: #f1f1f1; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #ccc; border-radius: 4px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #aaa; }
+
+        /* Sidebar Link Active State */
+        .nav-link { cursor: pointer; }
+        .nav-link.active {
+            background-color: rgba(52, 176, 229, 0.1);
+            color: var(--primary-blue);
+            border-right: 3px solid var(--primary-blue);
+        }
+
+        .kpi-card { border-top: 4px solid var(--primary-blue); }
+
+        /* Table Styles */
+        th, td { white-space: nowrap; }
+        
+        /* Editable Styles */
+        td[contenteditable="true"], th[contenteditable="true"], select.editable-input {
+            background-color: transparent;
+            cursor: text;
+            transition: background-color 0.2s;
+            outline: none;
+            border: 1px dashed transparent;
+            width: 100%;
+            padding: 4px;
+        }
+        td[contenteditable="true"]:hover, th[contenteditable="true"]:hover {
+            background-color: #f8fafc;
+            border: 1px dashed #cbd5e1;
+        }
+        td[contenteditable="true"]:focus, th[contenteditable="true"]:focus {
+            background-color: #fff;
+            border: 1px solid var(--primary-blue);
+            border-radius: 4px;
+        }
+        
+        .editable-header {
+            color: var(--primary-blue);
+            text-decoration: underline;
+            text-decoration-style: dotted;
+            text-underline-offset: 4px;
+            cursor: text;
+        }
+
+        /* Year Input Style */
+        .year-input {
+            background-color: transparent;
+            border: none;
+            font-weight: 600;
+            color: #4b5563;
+            width: 50px;
+            padding: 0;
+            margin: 0;
+            -moz-appearance: textfield;
+        }
+        .year-input::-webkit-outer-spin-button,
+        .year-input::-webkit-inner-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+        .year-input:focus { outline: none; }
+
+        /* Helper to hide/show views */
+        .hidden { display: none !important; }
+
+        /* Invoice Modal Overlay */
+        #invoice-modal {
+            background-color: rgba(0,0,0,0.5);
+        }
+
+        /* Loading Overlay */
+        .loading-overlay {
+            position: fixed;
+            inset: 0;
+            background-color: rgba(255,255,255,0.8);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 100;
+        }
+        .loading-spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid #e5e7eb;
+            border-top-color: #34b0e5;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* Save indicator */
+        .save-indicator {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: #10b981;
+            color: white;
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-size: 14px;
+            display: none;
+            z-index: 50;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        .save-indicator.show {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .save-indicator.error {
+            background: #ef4444;
+        }
+        
+        @media print {
+            body * {
+                visibility: hidden;
+            }
+            #invoice-print-area, #invoice-print-area * {
+                visibility: visible;
+            }
+            #invoice-print-area {
+                position: absolute;
+                left: 0;
+                top: 0;
+                width: 100%;
+                background: white;
+                padding: 20px;
+            }
+            .no-print {
+                display: none !important;
+            }
+        }
+    </style>
+</head>
+<body class="flex h-screen overflow-hidden">
+
+    <!-- Loading Overlay -->
+    <div id="loading-overlay" class="loading-overlay">
+        <div class="loading-spinner"></div>
+    </div>
+
+    <!-- Save Indicator -->
+    <div id="save-indicator" class="save-indicator">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+        <span>Saved</span>
+    </div>
+
+    <!-- Sidebar -->
+    <aside class="w-64 bg-white border-r border-gray-200 flex-shrink-0 flex flex-col h-full overflow-y-auto">
+        <div class="p-6 flex items-center gap-3">
+            <div class="w-10 h-10 bg-gray-200 rounded-lg flex items-center justify-center text-gray-500 text-xs font-bold flex-shrink-0">LOGO</div>
+            <div class="flex flex-col justify-center overflow-hidden">
+                <span class="text-[10px] font-bold text-gray-500 uppercase tracking-tight leading-tight whitespace-nowrap truncate">GN TRAVEL MARKETING LLC</span>
+                <span class="text-[15px] font-extrabold text-[#34b0e5] leading-none whitespace-nowrap">FINANCE TRACKER</span>
+            </div>
+        </div>
+        
+        <nav class="flex-1 px-4 space-y-2 mt-4">
+            <div onclick="switchView('dashboard')" id="nav-dashboard" class="nav-link active flex items-center px-4 py-3 text-sm font-medium rounded-lg transition-colors">
+                <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"></path></svg>
+                Dashboard
+            </div>
+            <div onclick="switchView('income')" id="nav-income" class="nav-link text-gray-600 hover:bg-gray-50 flex items-center px-4 py-3 text-sm font-medium rounded-lg transition-colors">
+                <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                Income Tracker
+            </div>
+            <div onclick="switchView('expenses')" id="nav-expenses" class="nav-link text-gray-600 hover:bg-gray-50 flex items-center px-4 py-3 text-sm font-medium rounded-lg transition-colors">
+                <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 14l6-6m-5.5.5h.01m4.99 5h.01M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16l3.5-2 3.5 2 3.5-2 3.5 2z"></path></svg>
+                Expenses Tracker
+            </div>
+            <div onclick="switchView('cash')" id="nav-cash" class="nav-link text-gray-600 hover:bg-gray-50 flex items-center px-4 py-3 text-sm font-medium rounded-lg transition-colors">
+                <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
+                Cash Overview
+            </div>
+        </nav>
+        
+        <div class="p-4 border-t border-gray-200">
+            <div class="text-xs text-gray-400 text-center">
+                <span id="sync-status">●</span> Auto-saving enabled
+            </div>
+        </div>
+    </aside>
+
+    <!-- Main Content Area -->
+    <main class="flex-1 overflow-y-auto p-4 md:p-8 relative">
+        
+        <!-- HEADER (Shared) -->
+        <header class="flex justify-between items-center mb-8">
+            <div>
+                <h1 class="text-2xl font-bold text-gray-800" id="page-title">Business Dashboard</h1>
+                <p class="text-sm text-gray-500" id="page-subtitle">Daily and monthly report in a glance</p>
+            </div>
+            
+            <div class="flex gap-3">
+                <!-- Export Button -->
+                <div class="relative group">
+                    <button class="bg-white border border-gray-300 rounded-md px-3 py-2 text-sm shadow-sm flex items-center gap-2 hover:bg-gray-50">
+                        <svg class="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+                        Export
+                    </button>
+                    <!-- Dropdown -->
+                    <div class="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg hidden group-hover:block border border-gray-100 z-50">
+                        <a href="#" onclick="exportToCSV('income')" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Export Income</a>
+                        <a href="#" onclick="exportToCSV('expenses')" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Export Expenses</a>
+                        <a href="#" onclick="exportToCSV('cash')" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Export Cash Flow</a>
+                    </div>
+                </div>
+
+                <!-- Currency Toggle -->
+                <div class="bg-white border border-gray-300 rounded-md px-1 py-1 text-sm shadow-sm flex items-center">
+                    <button onclick="toggleCurrency('PHP')" id="btn-php" class="px-3 py-1 rounded text-xs font-bold bg-blue-100 text-blue-600">PHP</button>
+                    <button onclick="toggleCurrency('USD')" id="btn-usd" class="px-3 py-1 rounded text-xs font-bold text-gray-500 hover:bg-gray-50">USD</button>
+                </div>
+
+                <!-- Year Input -->
+                <div class="bg-white border border-gray-300 rounded-md px-3 py-2 text-sm shadow-sm flex items-center gap-2 relative">
+                    <svg class="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                    <input type="number" id="year-selector" class="year-input" value="2026" onchange="changeYear(this.value)">
+                </div>
+            </div>
+        </header>
+
+        <!-- VIEW: DASHBOARD -->
+        <section id="view-dashboard" class="pb-8">
+            <!-- KPI Grid -->
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+                <div class="kpi-card bg-white p-6 rounded-xl shadow-sm hover:shadow-md transition-shadow">
+                    <h3 class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Total Net Revenue</h3>
+                    <div class="text-2xl font-bold text-gray-800" id="kpi-revenue">₱0.00</div>
+                </div>
+                <div class="kpi-card bg-white p-6 rounded-xl shadow-sm hover:shadow-md transition-shadow">
+                    <h3 class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Total Expenses</h3>
+                    <div class="text-2xl font-bold text-red-500" id="kpi-expenses">₱0.00</div>
+                </div>
+                <div class="kpi-card bg-white p-6 rounded-xl shadow-sm hover:shadow-md transition-shadow">
+                    <h3 class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Net Income</h3>
+                    <div class="text-2xl font-bold text-green-500" id="kpi-net-income">₱0.00</div>
+                </div>
+                <div class="kpi-card bg-white p-6 rounded-xl shadow-sm hover:shadow-md transition-shadow">
+                    <h3 class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Profit Margin %</h3>
+                    <div class="text-2xl font-bold text-gray-800" id="kpi-margin">0.0%</div>
+                </div>
+            </div>
+
+            <!-- Charts Section -->
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+                <div class="lg:col-span-2 bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+                    <div class="flex justify-between items-center mb-6">
+                        <h3 class="text-lg font-bold text-gray-800">Revenue by Business</h3>
+                        <span class="text-xs bg-blue-50 text-[#34b0e5] px-2 py-1 rounded">Annual</span>
+                    </div>
+                    <div class="relative h-64 w-full">
+                        <canvas id="revenueBarChart"></canvas>
+                    </div>
+                </div>
+                <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex flex-col items-center justify-center">
+                     <div class="w-full flex justify-between items-center mb-4">
+                        <h3 class="text-lg font-bold text-gray-800">Revenue Mix</h3>
+                    </div>
+                    <div class="relative h-56 w-full flex justify-center">
+                        <canvas id="revenuePieChart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Main Table -->
+            <div class="bg-white rounded-xl shadow-sm border border-gray-100 mb-8 overflow-hidden">
+                <div class="p-6 border-b border-gray-100 flex justify-between items-center">
+                    <h3 class="text-lg font-bold text-[#34b0e5]">Income & Expenses Breakdown</h3>
+                    <div class="text-xs text-gray-500 italic">Edit 'Expenses' column. 'Income' is auto-calculated.</div>
+                </div>
+                <div class="overflow-x-auto custom-scrollbar">
+                    <table class="w-full text-sm text-left" id="table-main">
+                        <thead class="text-xs text-gray-700 uppercase bg-gray-50">
+                            <tr>
+                                <th class="px-6 py-3 border-r border-gray-100">Month</th>
+                                <th class="px-6 py-3 text-right">Income</th>
+                                <th class="px-6 py-3 text-right">Expenses</th>
+                                <th class="px-6 py-3 text-right">Net Income</th>
+                                <th class="px-6 py-3 text-right">Profit Margin %</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-gray-100"></tbody>
+                        <tfoot class="bg-orange-50 font-bold border-t-2 border-[#34b0e5]">
+                            <tr>
+                                <td class="px-6 py-4 border-r border-gray-200">Total</td>
+                                <td class="px-6 py-4 text-right" id="total-income-main">₱0</td>
+                                <td class="px-6 py-4 text-right text-red-500" id="total-expenses-main">₱0</td>
+                                <td class="px-6 py-4 text-right text-green-600" id="total-net-main">₱0</td>
+                                <td class="px-6 py-4 text-right" id="total-margin-main">0%</td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Business Details Table -->
+            <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+                 <div class="p-6 border-b border-gray-100 flex justify-between items-center">
+                    <div>
+                        <h3 class="text-lg font-bold text-[#34b0e5]">Business Income</h3>
+                    </div>
+                    <div class="flex gap-2">
+                        <button id="restore-btn" onclick="restoreColumn()" disabled class="flex items-center gap-1 bg-gray-100 text-gray-400 px-3 py-1.5 rounded-md text-sm font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed hover:bg-green-50 hover:text-green-600">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6"></path></svg>
+                            Restore Business
+                        </button>
+                        <button onclick="addBusinessColumn()" class="flex items-center gap-1 bg-blue-50 text-[#34b0e5] px-3 py-1.5 rounded-md text-sm font-semibold hover:bg-blue-100 transition-colors">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+                            Add Business
+                        </button>
+                    </div>
+                </div>
+                <div class="overflow-x-auto custom-scrollbar">
+                    <table class="w-full text-sm text-left" id="table-business">
+                        <thead class="text-xs text-gray-700 uppercase bg-gray-50">
+                            <tr id="business-header-row">
+                                <th class="px-6 py-3 border-r border-gray-100">Month</th>
+                                <th class="px-6 py-3 text-right bg-gray-50 border-l border-gray-100" id="header-total">Total</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-gray-100" id="business-body"></tbody>
+                        <tfoot class="bg-orange-50 font-bold border-t-2 border-[#34b0e5]" id="business-footer">
+                            <tr id="business-footer-row">
+                                <td class="px-6 py-4 border-r border-gray-200">Total</td>
+                                <td class="px-6 py-4 text-right border-l border-gray-200" id="footer-total">₱0</td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- VIEW: INCOME TRACKER -->
+        <section id="view-income" class="hidden pb-8">
+            <!-- Top Grid: KPIs and Pie Chart -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                <!-- KPI 1 -->
+                <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex flex-col justify-center items-center text-center">
+                    <h3 class="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-2">Monthly Gross Income</h3>
+                    <div class="text-3xl font-bold text-[#34b0e5]" id="tracker-total-gross">₱0.00</div>
+                </div>
+                
+                <!-- KPI 2 -->
+                <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex flex-col justify-center items-center text-center">
+                    <h3 class="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-2">Monthly Net Income</h3>
+                    <div class="text-3xl font-bold text-green-500" id="tracker-total-net">₱0.00</div>
+                </div>
+
+                <!-- Pie Chart -->
+                <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex flex-col items-center justify-center relative">
+                    <h3 class="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-2 absolute top-4 left-4">Income by Service</h3>
+                    <div class="h-40 w-full flex justify-center mt-6">
+                        <canvas id="trackerServiceChart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- New Section: Monthly Income Per Service Bar Chart -->
+            <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100 mb-8">
+                <h3 class="text-lg font-bold text-[#34b0e5] mb-4">Monthly Income Per Service</h3>
+                <div class="relative h-64 w-full">
+                    <canvas id="trackerBarChart"></canvas>
+                </div>
+            </div>
+
+            <!-- Detailed Table -->
+            <div class="bg-white rounded-xl shadow-sm border border-gray-100 mb-8 overflow-hidden">
+                <div class="p-6 border-b border-gray-100 flex justify-between items-center">
+                    <h3 class="text-lg font-bold text-[#34b0e5]">Income Tracker Details</h3>
+                    <button onclick="addIncomeRow()" class="flex items-center gap-1 bg-blue-50 text-[#34b0e5] px-3 py-1.5 rounded-md text-sm font-semibold hover:bg-blue-100 transition-colors">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+                        Add Entry
+                    </button>
+                </div>
+                <div class="overflow-x-auto custom-scrollbar">
+                    <table class="w-full text-sm text-left" id="table-income-tracker">
+                        <thead class="text-xs text-gray-700 uppercase bg-gray-50 sticky top-0 z-10">
+                            <tr>
+                                <th class="px-4 py-3 border-r border-gray-100">Date</th>
+                                <th class="px-4 py-3 border-r border-gray-100">Client Name</th>
+                                <th class="px-4 py-3 border-r border-gray-100">Service Type</th>
+                                <th class="px-4 py-3 border-r border-gray-100">Pricing Model</th>
+                                <th class="px-4 py-3 text-right border-r border-gray-100">Gross</th>
+                                <th class="px-4 py-3 text-right border-r border-gray-100">Net</th>
+                                <th class="px-4 py-3 border-r border-gray-100">Mode</th>
+                                <th class="px-4 py-3 border-r border-gray-100">Status</th>
+                                <th class="px-4 py-3 border-r border-gray-100">Ref ID</th>
+                                <th class="px-4 py-3">Notes</th>
+                                <th class="px-2 py-3">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-gray-100" id="tracker-body">
+                            <!-- Rows via JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- VIEW: EXPENSES TRACKER -->
+        <section id="view-expenses" class="hidden pb-8">
+            <!-- Detailed Table -->
+            <div class="bg-white rounded-xl shadow-sm border border-gray-100 mb-8 overflow-hidden flex-1 flex flex-col">
+                <div class="p-6 border-b border-gray-100 flex justify-between items-center">
+                    <h3 class="text-lg font-bold text-[#34b0e5]">Expenses Details</h3>
+                    <button onclick="addExpenseRow()" class="flex items-center gap-1 bg-blue-50 text-[#34b0e5] px-3 py-1.5 rounded-md text-sm font-semibold hover:bg-blue-100 transition-colors">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+                        Add Expense
+                    </button>
+                </div>
+                <div class="overflow-x-auto custom-scrollbar flex-1">
+                    <table class="w-full text-sm text-left" id="table-expenses">
+                        <thead class="text-xs text-gray-700 uppercase bg-gray-50 sticky top-0 z-10">
+                            <tr>
+                                <th class="px-4 py-3 border-r border-gray-100">Date</th>
+                                <th class="px-4 py-3 border-r border-gray-100">Vendor</th>
+                                <th class="px-4 py-3 border-r border-gray-100">Category</th>
+                                <th class="px-4 py-3 border-r border-gray-100">Type</th>
+                                <th class="px-4 py-3 border-r border-gray-100">Service</th>
+                                <th class="px-4 py-3 text-right border-r border-gray-100">Amount</th>
+                                <th class="px-4 py-3 border-r border-gray-100">Payment</th>
+                                <th class="px-4 py-3 border-r border-gray-100">Status</th>
+                                <th class="px-4 py-3 border-r border-gray-100">Recurring</th>
+                                <th class="px-4 py-3">Notes</th>
+                                <th class="px-2 py-3"></th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-gray-100" id="expenses-body">
+                            <!-- Rows via JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- VIEW: CASH OVERVIEW -->
+        <section id="view-cash" class="hidden pb-8">
+            <!-- Table 1: Cash Account Balances -->
+            <div class="bg-white rounded-xl shadow-sm border border-gray-100 mb-8 overflow-hidden">
+                <div class="p-6 border-b border-gray-100 flex justify-between items-center">
+                    <h3 class="text-lg font-bold text-[#34b0e5]">Cash Account Balances</h3>
+                    <button onclick="addCashAccountRow()" class="flex items-center gap-1 bg-blue-50 text-[#34b0e5] px-3 py-1.5 rounded-md text-sm font-semibold hover:bg-blue-100 transition-colors">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+                        Add Account Entry
+                    </button>
+                </div>
+                <div class="overflow-x-auto custom-scrollbar">
+                    <table class="w-full text-sm text-left">
+                        <thead class="text-xs text-gray-700 uppercase bg-gray-50 sticky top-0 z-10">
+                            <tr>
+                                <th class="px-6 py-3 border-r border-gray-100">Month</th>
+                                <th class="px-6 py-3 border-r border-gray-100">Account Name</th>
+                                <th class="px-6 py-3 border-r border-gray-100">Account Category</th>
+                                <th class="px-6 py-3 border-r border-gray-100">Institution / Platform</th>
+                                <th class="px-6 py-3 text-right">Balance</th>
+                                <th class="px-2 py-3"></th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-gray-100" id="cash-balances-body">
+                            <!-- JS will populate -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Table 2: Monthly Cash Movement -->
+            <div class="bg-white rounded-xl shadow-sm border border-gray-100 mb-8 overflow-hidden">
+                <div class="p-6 border-b border-gray-100 flex justify-between items-center">
+                    <h3 class="text-lg font-bold text-[#34b0e5]">Monthly Cash Movement</h3>
+                    <div class="text-xs text-gray-500 italic">Net Cash Change is auto-calculated</div>
+                </div>
+                <div class="overflow-x-auto custom-scrollbar">
+                    <table class="w-full text-sm text-left">
+                        <thead class="text-xs text-gray-700 uppercase bg-gray-50 sticky top-0 z-10">
+                            <tr>
+                                <th class="px-6 py-3 border-r border-gray-100">Month</th>
+                                <th class="px-6 py-3 text-right border-r border-gray-100">Starting Cash</th>
+                                <th class="px-6 py-3 text-right border-r border-gray-100">Ending Cash</th>
+                                <th class="px-6 py-3 text-right">Net Cash Change</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-gray-100" id="cash-movement-body">
+                            <!-- JS will populate Jan-Dec -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- INVOICE MODAL -->
+    <div id="invoice-modal" class="fixed inset-0 hidden items-center justify-center z-50">
+        <div class="bg-white rounded-lg shadow-xl w-[800px] max-h-[90vh] overflow-y-auto flex flex-col">
+            <!-- Modal Header -->
+            <div class="p-4 border-b flex justify-between items-center bg-gray-50 rounded-t-lg">
+                <h3 class="font-bold text-lg text-gray-800">Generate Invoice</h3>
+                <button onclick="closeInvoice()" class="text-gray-500 hover:text-gray-700">✕</button>
+            </div>
+            
+            <!-- Invoice Preview -->
+            <div class="p-8 bg-white" id="invoice-print-area">
+                <div class="flex justify-between mb-8">
+                    <div>
+                        <h1 class="text-2xl font-bold text-[#34b0e5]">INVOICE</h1>
+                        <p class="text-sm text-gray-500 mt-1">GN TRAVEL MARKETING LLC</p>
+                        <p class="text-xs text-gray-400">123 Business Rd, City, Country</p>
+                    </div>
+                    <div class="text-right">
+                        <p class="text-sm font-bold text-gray-700">Invoice #: <span id="inv-num">001</span></p>
+                        <p class="text-sm text-gray-500">Date: <span id="inv-date">Oct 24, 2026</span></p>
+                    </div>
+                </div>
+
+                <div class="mb-8 p-4 bg-gray-50 rounded">
+                    <p class="text-xs font-bold text-gray-500 uppercase mb-1">Bill To:</p>
+                    <h3 class="font-bold text-lg text-gray-800" id="inv-client">Client Name</h3>
+                </div>
+
+                <table class="w-full mb-8">
+                    <thead class="border-b-2 border-gray-200">
+                        <tr>
+                            <th class="text-left py-2 font-bold text-gray-600">Description</th>
+                            <th class="text-right py-2 font-bold text-gray-600">Amount</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td class="py-4 text-gray-700" id="inv-service">Service Description</td>
+                            <td class="py-4 text-right font-bold text-gray-800" id="inv-amount">₱0.00</td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <div class="flex justify-end">
+                    <div class="w-1/2 border-t pt-4">
+                        <div class="flex justify-between items-center">
+                            <span class="font-bold text-xl">Total</span>
+                            <span class="font-bold text-xl text-[#34b0e5]" id="inv-total">₱0.00</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="mt-12 text-center text-xs text-gray-400">
+                    <p>Thank you for your business!</p>
+                </div>
+            </div>
+
+            <!-- Modal Footer -->
+            <div class="p-4 border-t bg-gray-50 flex justify-end gap-2 rounded-b-lg">
+                <button onclick="closeInvoice()" class="px-4 py-2 text-gray-600 hover:bg-gray-200 rounded">Close</button>
+                <button onclick="window.print()" class="px-4 py-2 bg-[#34b0e5] text-white rounded hover:bg-blue-500 flex items-center gap-2">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"></path></svg>
+                    Print / PDF
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- CONFIG ---
+        const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+        const API_BASE = '/api';
+        let currentCurrency = 'PHP';
+        const exchangeRate = 58;
+        let currentYear = new Date().getFullYear();
+
+        // --- DATA STORES ---
+        let incomeRecords = [];
+        let expenseRecords = [];
+        let cashAccounts = [];
+        let cashMovement = {};
+        let businessColumns = ['Service A', 'Service B'];
+        let businessData = {};
+        let dashboardExpenses = {};
+        let deletedColumns = [];
+
+        // --- SAVE DEBOUNCE ---
+        let saveTimeout = null;
+        const SAVE_DELAY = 1000;
+
+        // --- API FUNCTIONS ---
+        async function apiGet(endpoint) {
+            try {
+                const response = await fetch(`${API_BASE}/${endpoint}`);
+                const result = await response.json();
+                if (result.success) return result.data;
+                throw new Error(result.error);
+            } catch (error) {
+                console.error(`API GET ${endpoint} error:`, error);
+                return null;
+            }
+        }
+
+        async function apiPost(endpoint, data) {
+            try {
+                const response = await fetch(`${API_BASE}/${endpoint}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+                const result = await response.json();
+                if (result.success) {
+                    showSaveIndicator();
+                    return result.data || result;
+                }
+                throw new Error(result.error);
+            } catch (error) {
+                console.error(`API POST ${endpoint} error:`, error);
+                showSaveIndicator(true);
+                return null;
+            }
+        }
+
+        async function apiPut(endpoint, data) {
+            try {
+                const response = await fetch(`${API_BASE}/${endpoint}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+                const result = await response.json();
+                if (result.success) {
+                    showSaveIndicator();
+                    return result.data || result;
+                }
+                throw new Error(result.error);
+            } catch (error) {
+                console.error(`API PUT ${endpoint} error:`, error);
+                showSaveIndicator(true);
+                return null;
+            }
+        }
+
+        async function apiDelete(endpoint, id) {
+            try {
+                const response = await fetch(`${API_BASE}/${endpoint}?id=${id}`, {
+                    method: 'DELETE'
+                });
+                const result = await response.json();
+                if (result.success) {
+                    showSaveIndicator();
+                    return true;
+                }
+                throw new Error(result.error);
+            } catch (error) {
+                console.error(`API DELETE ${endpoint} error:`, error);
+                showSaveIndicator(true);
+                return false;
+            }
+        }
+
+        function showSaveIndicator(isError = false) {
+            const indicator = document.getElementById('save-indicator');
+            indicator.classList.remove('error');
+            if (isError) {
+                indicator.classList.add('error');
+                indicator.querySelector('span').textContent = 'Save failed';
+            } else {
+                indicator.querySelector('span').textContent = 'Saved';
+            }
+            indicator.classList.add('show');
+            setTimeout(() => indicator.classList.remove('show'), 2000);
+        }
+
+        // --- GLOBAL UTILS ---
+        function parseMoney(str) {
+            if (!str) return 0;
+            const clean = str.replace(/[₱$₱,\s]/g, '');
+            const num = parseFloat(clean);
+            return isNaN(num) ? 0 : num;
+        }
+
+        function formatMoney(num) {
+            let val = num;
+            let symbol = '₱';
+            
+            if (currentCurrency === 'USD') {
+                val = num / exchangeRate;
+                symbol = '$';
+            }
+            
+            return symbol + val.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        }
+
+        function toggleCurrency(curr) {
+            if(curr === currentCurrency) return;
+            currentCurrency = curr;
+            
+            if(curr === 'PHP') {
+                document.getElementById('btn-php').className = "px-3 py-1 rounded text-xs font-bold bg-blue-100 text-blue-600";
+                document.getElementById('btn-usd').className = "px-3 py-1 rounded text-xs font-bold text-gray-500 hover:bg-gray-50";
+            } else {
+                document.getElementById('btn-usd').className = "px-3 py-1 rounded text-xs font-bold bg-blue-100 text-blue-600";
+                document.getElementById('btn-php').className = "px-3 py-1 rounded text-xs font-bold text-gray-500 hover:bg-gray-50";
+            }
+
+            calculateDashboard();
+            updateIncomeTracker();
+            calculateCashMovement();
+        }
+
+        function changeYear(year) {
+            currentYear = parseInt(year);
+            document.getElementById('year-selector').value = year;
+        }
+
+        // --- DEBOUNCED SAVE ---
+        function scheduleSave(saveFunction) {
+            if (saveTimeout) clearTimeout(saveTimeout);
+            saveTimeout = setTimeout(saveFunction, SAVE_DELAY);
+        }
+
+        // --- DATA PERSISTENCE ---
+        async function loadAllData() {
+            document.getElementById('loading-overlay').style.display = 'flex';
+            
+            try {
+                // Load income records
+                const incomeData = await apiGet('income');
+                if (incomeData) incomeRecords = incomeData;
+
+                // Load expense records
+                const expenseData = await apiGet('expenses');
+                if (expenseData) expenseRecords = expenseData;
+
+                // Load cash data
+                const cashAccountsData = await apiGet('cash?type=accounts');
+                if (cashAccountsData) cashAccounts = cashAccountsData;
+
+                const cashMovementData = await apiGet('cash?type=movement');
+                if (cashMovementData) cashMovement = cashMovementData;
+
+                // Load business data
+                const businessDataResult = await apiGet('business');
+                if (businessDataResult) {
+                    businessColumns = businessDataResult.columns || ['Service A', 'Service B'];
+                    businessData = businessDataResult.businessData || {};
+                    dashboardExpenses = businessDataResult.dashboardExpenses || {};
+                }
+
+                // Initialize UI
+                initDashboard();
+                renderIncomeTable();
+                renderExpenseTable();
+                renderCashAccountsTable();
+                initCashMovement();
+                calculateDashboard();
+                
+            } catch (error) {
+                console.error('Error loading data:', error);
+            } finally {
+                document.getElementById('loading-overlay').style.display = 'none';
+            }
+        }
+
+        async function saveIncomeRecords() {
+            // Save all income records by PUT to update the entire list
+            await apiPut('income', incomeRecords);
+        }
+
+        async function saveExpenseRecords() {
+            await apiPut('expenses', expenseRecords);
+        }
+
+        async function saveCashAccounts() {
+            await apiPut('cash?type=accounts', cashAccounts);
+        }
+
+        async function saveCashMovement() {
+            await apiPost('cash?type=movement', cashMovement);
+        }
+
+        async function saveBusinessData() {
+            await apiPost('business', {
+                columns: businessColumns,
+                businessData: businessData,
+                dashboardExpenses: dashboardExpenses
+            });
+        }
+
+        // --- EXPORT TO CSV ---
+        function exportToCSV(type) {
+            let tableId = '';
+            let filename = '';
+            
+            if(type === 'income') { tableId = 'table-income-tracker'; filename = 'income_report.csv'; }
+            if(type === 'expenses') { tableId = 'table-expenses'; filename = 'expenses_report.csv'; }
+            if(type === 'cash') { tableId = 'table-business'; filename = 'business_income_report.csv'; }
+
+            const table = document.getElementById(tableId);
+            if(!table) return;
+
+            let csv = [];
+            const rows = table.querySelectorAll("tr");
+            
+            for (let i = 0; i < rows.length; i++) {
+                let row = [], cols = rows[i].querySelectorAll("td, th");
+                for (let j = 0; j < cols.length; j++) {
+                    let data = cols[j].innerText.replace(/(\r\n|\n|\r)/gm, "").replace(/"/g, '""'); 
+                    if(j < cols.length - 1) row.push('"' + data + '"');
+                }
+                csv.push(row.join(","));
+            }
+
+            const blob = new Blob([csv.join("\n")], { type: "text/csv" });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement("a");
+            a.setAttribute("hidden", "");
+            a.setAttribute("href", url);
+            a.setAttribute("download", filename);
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+        }
+
+        // --- INVOICE GENERATOR ---
+        function openInvoice(btn) {
+            const row = btn.closest('tr');
+            const cells = row.querySelectorAll('td');
+            
+            const date = cells[0].querySelector('input') ? cells[0].querySelector('input').value : cells[0].innerText;
+            const client = cells[1].innerText;
+            const service = cells[2].querySelector('select') ? cells[2].querySelector('select').value : cells[2].innerText;
+            const amount = cells[5].innerText;
+            const ref = cells[8].innerText;
+
+            document.getElementById('inv-date').innerText = date;
+            document.getElementById('inv-num').innerText = ref || "001";
+            document.getElementById('inv-client').innerText = client || "Client Name";
+            document.getElementById('inv-service').innerText = service;
+            document.getElementById('inv-amount').innerText = amount;
+            document.getElementById('inv-total').innerText = amount;
+
+            document.getElementById('invoice-modal').classList.remove('hidden');
+            document.getElementById('invoice-modal').classList.add('flex');
+        }
+
+        function closeInvoice() {
+            document.getElementById('invoice-modal').classList.add('hidden');
+            document.getElementById('invoice-modal').classList.remove('flex');
+        }
+
+        // --- SHARED VIEW LOGIC ---
+        function switchView(viewId) {
+            document.querySelectorAll('section[id^="view-"]').forEach(el => el.classList.add('hidden'));
+            document.getElementById('view-' + viewId).classList.remove('hidden');
+
+            document.querySelectorAll('.nav-link').forEach(el => {
+                el.classList.remove('active', 'bg-[#34b0e5]/10', 'text-[#34b0e5]', 'border-r-4', 'border-[#34b0e5]');
+                el.classList.add('text-gray-600', 'hover:bg-gray-50');
+                el.style.backgroundColor = ''; el.style.color = ''; el.style.borderRight = '';
+            });
+
+            document.getElementById('nav-' + viewId).classList.add('active');
+            document.getElementById('page-title').innerText = viewId.charAt(0).toUpperCase() + viewId.slice(1) + (viewId === 'dashboard' ? ' Dashboard' : ' Tracker');
+            
+            if(viewId === 'income') updateIncomeTracker();
+            if(viewId === 'dashboard') calculateDashboard();
+            if(viewId === 'cash') calculateCashMovement();
+        }
+
+        // --- DASHBOARD LOGIC ---
+        function calculateDashboard() {
+            const busTable = document.getElementById('table-business');
+            const bodyRows = busTable.querySelectorAll('tbody tr');
+            const footerCells = busTable.querySelectorAll('tfoot td');
+            const headerCells = busTable.querySelectorAll('thead th');
+            const numBizCols = headerCells.length - 2; 
+            
+            let colSums = new Array(numBizCols).fill(0);
+            let colNames = [];
+            for(let c=1; c <= numBizCols; c++) {
+                const span = headerCells[c].querySelector('.editable-header');
+                colNames.push(span ? span.innerText : "Untitled");
+            }
+
+            let monthlyIncomes = [];
+            let totalYearlyIncome = 0;
+
+            bodyRows.forEach((row, rIdx) => {
+                const cells = row.querySelectorAll('td');
+                let rowSum = 0;
+                for(let c=1; c <= numBizCols; c++) {
+                    const val = parseMoney(cells[c].innerText);
+                    rowSum += val;
+                    colSums[c-1] += val; 
+                }
+                cells[cells.length-1].innerText = formatMoney(rowSum);
+                monthlyIncomes.push(rowSum);
+                totalYearlyIncome += rowSum;
+            });
+            
+            let grandTotal = 0;
+            for(let c=1; c <= numBizCols; c++) {
+                footerCells[c].innerText = formatMoney(colSums[c-1]);
+                grandTotal += colSums[c-1];
+            }
+            footerCells[footerCells.length-1].innerText = formatMoney(grandTotal);
+
+            const mainRows = document.querySelectorAll('#table-main tbody tr');
+            let totalExpenses = 0;
+            let totalNet = 0;
+
+            mainRows.forEach((row, rIdx) => {
+                const income = monthlyIncomes[rIdx] || 0;
+                const expenseCell = row.querySelector('.expense-cell');
+                const expense = parseMoney(expenseCell.innerText);
+                const net = income - expense;
+                
+                row.querySelector('.income-cell').innerText = formatMoney(income);
+                row.querySelector('.net-cell').innerText = formatMoney(net);
+                
+                const netCell = row.querySelector('.net-cell');
+                netCell.className = `px-6 py-4 text-right net-cell font-medium ${net >= 0 ? 'text-green-600' : 'text-red-500'}`;
+
+                const marginCell = row.querySelector('.margin-cell');
+                if(income > 0) {
+                    const margin = (net / income) * 100;
+                    marginCell.innerText = margin.toFixed(1) + '%';
+                    marginCell.className = `px-6 py-4 text-right margin-cell font-medium ${margin >= 0 ? 'text-green-600' : 'text-red-500'}`;
+                } else {
+                    marginCell.innerText = '-';
+                    marginCell.className = 'px-6 py-4 text-right margin-cell text-gray-400';
+                }
+
+                totalExpenses += expense;
+                totalNet += net;
+            });
+
+            document.getElementById('total-income-main').innerText = formatMoney(totalYearlyIncome);
+            document.getElementById('total-expenses-main').innerText = formatMoney(totalExpenses);
+            document.getElementById('total-net-main').innerText = formatMoney(totalNet);
+            const totalMargin = totalYearlyIncome > 0 ? (totalNet / totalYearlyIncome) * 100 : 0;
+            document.getElementById('total-margin-main').innerText = totalMargin.toFixed(1) + '%';
+
+            document.getElementById('kpi-revenue').innerText = formatMoney(totalYearlyIncome);
+            document.getElementById('kpi-expenses').innerText = formatMoney(totalExpenses);
+            document.getElementById('kpi-net-income').innerText = formatMoney(totalNet);
+            document.getElementById('kpi-margin').innerText = totalMargin.toFixed(1) + '%';
+            
+            // Update charts
+            if(window.revenueBarChart) {
+                window.revenueBarChart.data.labels = colNames;
+                window.revenueBarChart.data.datasets[0].data = colSums;
+                window.revenueBarChart.update();
+            }
+            if(window.revenuePieChart) {
+                window.revenuePieChart.data.labels = colNames;
+                window.revenuePieChart.data.datasets[0].data = colSums;
+                const baseColors = ['#34b0e5', '#84d0f0', '#1e6b8c', '#a0e0f8', '#0f4b63', '#62c4ea', '#103a4a'];
+                window.revenuePieChart.data.datasets[0].backgroundColor = colNames.map((_, i) => baseColors[i % baseColors.length]);
+                window.revenuePieChart.update();
+            }
+        }
+
+        // --- INIT DASHBOARD ---
+        function initDashboard() {
+            const mainBody = document.querySelector('#table-main tbody');
+            const busBody = document.querySelector('#table-business tbody');
+            const headerRow = document.getElementById('business-header-row');
+            const footerRow = document.getElementById('business-footer-row');
+            
+            mainBody.innerHTML = '';
+            busBody.innerHTML = '';
+            
+            // Clear existing business columns (except Month and Total)
+            while (headerRow.children.length > 2) {
+                headerRow.removeChild(headerRow.children[1]);
+            }
+            while (footerRow.children.length > 2) {
+                footerRow.removeChild(footerRow.children[1]);
+            }
+            
+            MONTHS.forEach((month, index) => {
+                const trMain = document.createElement('tr');
+                trMain.className = "hover:bg-gray-50";
+                const expenseVal = dashboardExpenses[month] || 0;
+                trMain.innerHTML = `<td class="px-6 py-4 font-medium text-gray-900 border-r border-gray-100">${month}</td><td class="px-6 py-4 text-right bg-gray-50 text-gray-500 income-cell">₱0</td><td class="px-6 py-4 text-right expense-cell" contenteditable="true" data-month="${month}">${formatMoney(expenseVal)}</td><td class="px-6 py-4 text-right net-cell">-</td><td class="px-6 py-4 text-right margin-cell">-</td>`;
+                mainBody.appendChild(trMain);
+                
+                const trBus = document.createElement('tr');
+                trBus.className = "hover:bg-gray-50";
+                trBus.setAttribute('data-month', month);
+                trBus.innerHTML = `<td class="px-6 py-4 font-medium text-gray-900 border-r border-gray-100">${month}</td><td class="px-6 py-4 text-right bg-gray-50 border-l border-gray-100 font-medium total-cell">₱0</td>`;
+                busBody.appendChild(trBus);
+            });
+
+            // Add business columns from saved data
+            businessColumns.forEach(colName => {
+                addBusinessColumnUI(colName);
+            });
+
+            attachDashboardListeners();
+        }
+
+        function addBusinessColumnUI(name) {
+            const table = document.getElementById('table-business');
+            const headRow = table.querySelector('thead tr');
+            const bodyRows = table.querySelectorAll('tbody tr');
+            const footRow = table.querySelector('tfoot tr');
+            const totalHeader = document.getElementById('header-total');
+            const totalFooter = document.getElementById('footer-total');
+
+            const newTh = document.createElement('th');
+            newTh.className = "px-6 py-3 text-right group relative";
+            newTh.innerHTML = `<div class="flex items-center justify-end gap-2"><span class="editable-header" contenteditable="true">${name}</span><button onclick="removeBusinessColumn(this)" class="opacity-0 group-hover:opacity-100 text-red-300 hover:text-red-500 transition-opacity p-1 rounded hover:bg-red-50">✕</button></div>`;
+            newTh.querySelector('span').addEventListener('blur', function() {
+                const colIndex = Array.from(headRow.children).indexOf(newTh) - 1;
+                if (colIndex >= 0 && colIndex < businessColumns.length) {
+                    businessColumns[colIndex] = this.innerText;
+                    scheduleSave(saveBusinessData);
+                }
+                calculateDashboard();
+            });
+            headRow.insertBefore(newTh, totalHeader);
+
+            bodyRows.forEach((row, index) => {
+                const month = row.getAttribute('data-month');
+                const newTd = document.createElement('td');
+                newTd.className = "px-6 py-4 text-right";
+                newTd.contentEditable = "true";
+                const savedVal = businessData[`${name}_${month}`] || 0;
+                newTd.innerText = formatMoney(savedVal);
+                newTd.setAttribute('data-column', name);
+                newTd.setAttribute('data-month', month);
+                newTd.addEventListener('blur', function() {
+                    const val = parseMoney(this.innerText);
+                    const colName = this.getAttribute('data-column');
+                    const monthName = this.getAttribute('data-month');
+                    businessData[`${colName}_${monthName}`] = val;
+                    this.innerText = formatMoney(val);
+                    calculateDashboard();
+                    scheduleSave(saveBusinessData);
+                });
+                row.insertBefore(newTd, row.lastElementChild);
+            });
+            
+            const newFootTd = document.createElement('td');
+            newFootTd.className = "px-6 py-4 text-right";
+            newFootTd.innerText = "₱0";
+            footRow.insertBefore(newFootTd, totalFooter);
+            
+            calculateDashboard();
+        }
+
+        function addBusinessColumn(defaultName = "New Service") {
+            const name = defaultName;
+            businessColumns.push(name);
+            addBusinessColumnUI(name);
+            scheduleSave(saveBusinessData);
+        }
+
+        function removeBusinessColumn(btn) {
+            const th = btn.closest('th');
+            const headRow = th.parentElement;
+            const colIndex = Array.from(headRow.children).indexOf(th);
+            const colName = th.querySelector('.editable-header').innerText;
+            
+            // Store for restore
+            const colData = {};
+            MONTHS.forEach(month => {
+                colData[month] = businessData[`${colName}_${month}`] || 0;
+            });
+            deletedColumns.push({ name: colName, data: colData, index: colIndex - 1 });
+            
+            // Update restore button
+            document.getElementById('restore-btn').disabled = false;
+            
+            // Remove from businessColumns array
+            const arrayIndex = colIndex - 1;
+            if (arrayIndex >= 0) {
+                businessColumns.splice(arrayIndex, 1);
+            }
+            
+            // Remove header
+            th.remove();
+            
+            // Remove body cells
+            const bodyRows = document.querySelectorAll('#table-business tbody tr');
+            bodyRows.forEach(row => {
+                if (row.children[colIndex]) {
+                    row.children[colIndex].remove();
+                }
+            });
+            
+            // Remove footer cell
+            const footerRow = document.getElementById('business-footer-row');
+            if (footerRow.children[colIndex]) {
+                footerRow.children[colIndex].remove();
+            }
+            
+            calculateDashboard();
+            scheduleSave(saveBusinessData);
+        }
+
+        function restoreColumn() {
+            if (deletedColumns.length === 0) return;
+            
+            const restored = deletedColumns.pop();
+            businessColumns.splice(restored.index, 0, restored.name);
+            
+            // Restore data
+            MONTHS.forEach(month => {
+                businessData[`${restored.name}_${month}`] = restored.data[month];
+            });
+            
+            // Rebuild UI
+            initDashboard();
+            calculateDashboard();
+            
+            if (deletedColumns.length === 0) {
+                document.getElementById('restore-btn').disabled = true;
+            }
+            
+            scheduleSave(saveBusinessData);
+        }
+
+        function attachDashboardListeners() {
+            document.querySelectorAll('.expense-cell').forEach(cell => {
+                cell.addEventListener('blur', function() {
+                    const val = parseMoney(this.innerText);
+                    const month = this.getAttribute('data-month');
+                    dashboardExpenses[month] = val;
+                    this.innerText = formatMoney(val);
+                    calculateDashboard();
+                    scheduleSave(saveBusinessData);
+                });
+                cell.addEventListener('keydown', function(e) {
+                    if (e.key === 'Enter') {
+                        e.preventDefault();
+                        this.blur();
+                    }
+                });
+            });
+        }
+
+        // --- INCOME TRACKER ---
+        const serviceOptions = ["Social Media Management", "Virtual Assistance", "Paid Ads", "Branding", "Graphic Design"];
+        const pricingOptions = ["Monthly Retainer", "Project-Based"];
+        const statusOptions = ["Paid", "Pending", "Overdue"];
+
+        function renderIncomeTable() {
+            const tbody = document.getElementById('tracker-body');
+            tbody.innerHTML = '';
+            
+            incomeRecords.forEach((record, index) => {
+                const tr = createIncomeRow(record, index);
+                tbody.appendChild(tr);
+            });
+            
+            updateIncomeTracker();
+        }
+
+        function createIncomeRow(record, index) {
+            const tr = document.createElement('tr');
+            tr.className = "hover:bg-gray-50";
+            tr.setAttribute('data-id', record.id);
+            
+            const createSelect = (options, selected) => {
+                let html = `<select class="editable-input text-gray-700" onchange="updateIncomeRecord(this)">`;
+                options.forEach(opt => html += `<option value="${opt}" ${opt === selected ? 'selected' : ''}>${opt}</option>`);
+                html += `</select>`;
+                return html;
+            };
+
+            tr.innerHTML = `
+                <td class="px-4 py-3 border-r border-gray-100"><input type="date" value="${record.date || ''}" class="editable-input text-gray-700" onchange="updateIncomeRecord(this)"></td>
+                <td class="px-4 py-3 border-r border-gray-100 tracker-text" contenteditable="true">${record.clientName || 'Client Name'}</td>
+                <td class="px-4 py-3 border-r border-gray-100">${createSelect(serviceOptions, record.serviceType)}</td>
+                <td class="px-4 py-3 border-r border-gray-100">${createSelect(pricingOptions, record.pricingModel)}</td>
+                <td class="px-4 py-3 text-right border-r border-gray-100 tracker-money" contenteditable="true">${formatMoney(record.gross || 0)}</td>
+                <td class="px-4 py-3 text-right border-r border-gray-100 tracker-money" contenteditable="true">${formatMoney(record.net || 0)}</td>
+                <td class="px-4 py-3 border-r border-gray-100 tracker-text" contenteditable="true">${record.paymentMode || 'Bank Transfer'}</td>
+                <td class="px-4 py-3 border-r border-gray-100">${createSelect(statusOptions, record.status)}</td>
+                <td class="px-4 py-3 border-r border-gray-100 tracker-text" contenteditable="true">${record.refId || 'INV-001'}</td>
+                <td class="px-4 py-3 tracker-text" contenteditable="true">${record.notes || ''}</td>
+                <td class="px-2 py-3 text-center flex gap-1 justify-center">
+                    <button onclick="openInvoice(this)" class="text-blue-300 hover:text-blue-500" title="Generate Invoice">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                    </button>
+                    <button onclick="deleteIncomeRow(this)" class="text-gray-300 hover:text-red-500" title="Delete">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                    </button>
+                </td>
+            `;
+            
+            // Add blur listeners for editable cells
+            tr.querySelectorAll('[contenteditable="true"]').forEach(cell => {
+                cell.addEventListener('blur', function() {
+                    updateIncomeRecordFromRow(tr);
+                });
+                cell.addEventListener('keydown', function(e) {
+                    if (e.key === 'Enter') {
+                        e.preventDefault();
+                        this.blur();
+                    }
+                });
+            });
+            
+            return tr;
+        }
+
+        function addIncomeRow() {
+            const newRecord = {
+                id: Date.now().toString(),
+                date: new Date().toISOString().split('T')[0],
+                clientName: 'Client Name',
+                serviceType: serviceOptions[0],
+                pricingModel: pricingOptions[0],
+                gross: 0,
+                net: 0,
+                paymentMode: 'Bank Transfer',
+                status: statusOptions[0],
+                refId: `INV-${String(incomeRecords.length + 1).padStart(3, '0')}`,
+                notes: ''
+            };
+            
+            incomeRecords.push(newRecord);
+            
+            const tbody = document.getElementById('tracker-body');
+            const tr = createIncomeRow(newRecord, incomeRecords.length - 1);
+            tbody.appendChild(tr);
+            
+            updateIncomeTracker();
+            scheduleSave(saveIncomeRecords);
+        }
+
+        function updateIncomeRecord(element) {
+            const tr = element.closest('tr');
+            updateIncomeRecordFromRow(tr);
+        }
+
+        function updateIncomeRecordFromRow(tr) {
+            const id = tr.getAttribute('data-id');
+            const index = incomeRecords.findIndex(r => r.id === id);
+            if (index === -1) return;
+            
+            const cells = tr.querySelectorAll('td');
+            incomeRecords[index] = {
+                ...incomeRecords[index],
+                date: cells[0].querySelector('input').value,
+                clientName: cells[1].innerText,
+                serviceType: cells[2].querySelector('select').value,
+                pricingModel: cells[3].querySelector('select').value,
+                gross: parseMoney(cells[4].innerText),
+                net: parseMoney(cells[5].innerText),
+                paymentMode: cells[6].innerText,
+                status: cells[7].querySelector('select').value,
+                refId: cells[8].innerText,
+                notes: cells[9].innerText
+            };
+            
+            // Reformat money cells
+            cells[4].innerText = formatMoney(incomeRecords[index].gross);
+            cells[5].innerText = formatMoney(incomeRecords[index].net);
+            
+            updateIncomeTracker();
+            scheduleSave(saveIncomeRecords);
+        }
+
+        function deleteIncomeRow(btn) {
+            const tr = btn.closest('tr');
+            const id = tr.getAttribute('data-id');
+            
+            incomeRecords = incomeRecords.filter(r => r.id !== id);
+            tr.remove();
+            
+            updateIncomeTracker();
+            scheduleSave(saveIncomeRecords);
+        }
+
+        function updateIncomeTracker() {
+            let totalGross = 0;
+            let totalNet = 0;
+            let serviceTotals = {};
+            serviceOptions.forEach(s => serviceTotals[s] = 0);
+
+            incomeRecords.forEach(record => {
+                totalGross += record.gross || 0;
+                totalNet += record.net || 0;
+                if (serviceTotals[record.serviceType] !== undefined) {
+                    serviceTotals[record.serviceType] += record.net || 0;
+                }
+            });
+
+            document.getElementById('tracker-total-gross').innerText = formatMoney(totalGross);
+            document.getElementById('tracker-total-net').innerText = formatMoney(totalNet);
+
+            if(window.trackerChart) {
+                const labels = Object.keys(serviceTotals).filter(k => serviceTotals[k] > 0);
+                const data = labels.map(k => serviceTotals[k]);
+                window.trackerChart.data.labels = labels;
+                window.trackerChart.data.datasets[0].data = data;
+                window.trackerChart.update();
+                
+                window.trackerBarChart.data.labels = labels;
+                window.trackerBarChart.data.datasets[0].data = data;
+                window.trackerBarChart.update();
+            }
+        }
+
+        // --- EXPENSES TRACKER ---
+        const expenseCategories = ["Payroll", "Software / Tools", "Advertising", "Payment Processing Fees", "Tax", "Education / Coaching", "Miscellaneous"];
+        const expenseTypes = ["Fixed", "Variable"];
+        const expensePayments = ["Card", "Bank", "Cash", "Transfer"];
+        const expenseStatuses = ["Paid", "Pending", "Overdue"];
+        const expenseRecurring = ["Yes", "No"];
+
+        function renderExpenseTable() {
+            const tbody = document.getElementById('expenses-body');
+            tbody.innerHTML = '';
+            
+            expenseRecords.forEach((record, index) => {
+                const tr = createExpenseRow(record, index);
+                tbody.appendChild(tr);
+            });
+        }
+
+        function createExpenseRow(record, index) {
+            const tr = document.createElement('tr');
+            tr.className = "hover:bg-gray-50";
+            tr.setAttribute('data-id', record.id);
+            
+            const createSelect = (options, selected) => {
+                let html = `<select class="editable-input text-gray-700" onchange="updateExpenseRecord(this)">`;
+                options.forEach(opt => html += `<option value="${opt}" ${opt === selected ? 'selected' : ''}>${opt}</option>`);
+                html += `</select>`;
+                return html;
+            };
+
+            tr.innerHTML = `
+                <td class="px-4 py-3 border-r border-gray-100"><input type="date" value="${record.date || ''}" class="editable-input text-gray-700" onchange="updateExpenseRecord(this)"></td>
+                <td class="px-4 py-3 border-r border-gray-100 tracker-text" contenteditable="true">${record.vendor || 'Vendor Name'}</td>
+                <td class="px-4 py-3 border-r border-gray-100">${createSelect(expenseCategories, record.category)}</td>
+                <td class="px-4 py-3 border-r border-gray-100">${createSelect(expenseTypes, record.type)}</td>
+                <td class="px-4 py-3 border-r border-gray-100 tracker-text" contenteditable="true">${record.service || 'General'}</td>
+                <td class="px-4 py-3 text-right border-r border-gray-100 tracker-money" contenteditable="true">${formatMoney(record.amount || 0)}</td>
+                <td class="px-4 py-3 border-r border-gray-100">${createSelect(expensePayments, record.payment)}</td>
+                <td class="px-4 py-3 border-r border-gray-100">${createSelect(expenseStatuses, record.status)}</td>
+                <td class="px-4 py-3 border-r border-gray-100">${createSelect(expenseRecurring, record.recurring)}</td>
+                <td class="px-4 py-3 tracker-text" contenteditable="true">${record.notes || ''}</td>
+                <td class="px-2 py-3 text-center">
+                    <button onclick="deleteExpenseRow(this)" class="text-gray-300 hover:text-red-500">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                    </button>
+                </td>
+            `;
+            
+            tr.querySelectorAll('[contenteditable="true"]').forEach(cell => {
+                cell.addEventListener('blur', function() {
+                    updateExpenseRecordFromRow(tr);
+                });
+                cell.addEventListener('keydown', function(e) {
+                    if (e.key === 'Enter') {
+                        e.preventDefault();
+                        this.blur();
+                    }
+                });
+            });
+            
+            return tr;
+        }
+
+        function addExpenseRow() {
+            const newRecord = {
+                id: Date.now().toString(),
+                date: new Date().toISOString().split('T')[0],
+                vendor: 'Vendor Name',
+                category: expenseCategories[0],
+                type: expenseTypes[0],
+                service: 'General',
+                amount: 0,
+                payment: expensePayments[0],
+                status: expenseStatuses[0],
+                recurring: expenseRecurring[1],
+                notes: ''
+            };
+            
+            expenseRecords.push(newRecord);
+            
+            const tbody = document.getElementById('expenses-body');
+            const tr = createExpenseRow(newRecord, expenseRecords.length - 1);
+            tbody.appendChild(tr);
+            
+            scheduleSave(saveExpenseRecords);
+        }
+
+        function updateExpenseRecord(element) {
+            const tr = element.closest('tr');
+            updateExpenseRecordFromRow(tr);
+        }
+
+        function updateExpenseRecordFromRow(tr) {
+            const id = tr.getAttribute('data-id');
+            const index = expenseRecords.findIndex(r => r.id === id);
+            if (index === -1) return;
+            
+            const cells = tr.querySelectorAll('td');
+            expenseRecords[index] = {
+                ...expenseRecords[index],
+                date: cells[0].querySelector('input').value,
+                vendor: cells[1].innerText,
+                category: cells[2].querySelector('select').value,
+                type: cells[3].querySelector('select').value,
+                service: cells[4].innerText,
+                amount: parseMoney(cells[5].innerText),
+                payment: cells[6].querySelector('select').value,
+                status: cells[7].querySelector('select').value,
+                recurring: cells[8].querySelector('select').value,
+                notes: cells[9].innerText
+            };
+            
+            cells[5].innerText = formatMoney(expenseRecords[index].amount);
+            
+            scheduleSave(saveExpenseRecords);
+        }
+
+        function deleteExpenseRow(btn) {
+            const tr = btn.closest('tr');
+            const id = tr.getAttribute('data-id');
+            
+            expenseRecords = expenseRecords.filter(r => r.id !== id);
+            tr.remove();
+            
+            scheduleSave(saveExpenseRecords);
+        }
+
+        // --- CASH OVERVIEW ---
+        const cashAcctNames = ["Philippine Bank", "Business Savings", "Stripe Balance", "PayPal Balance", "Wise Balance"];
+        const cashAcctCategories = ["Operating Cash", "Payment Processors", "Savings / Reserves", "Tax Reserve", "Other"];
+
+        function renderCashAccountsTable() {
+            const tbody = document.getElementById('cash-balances-body');
+            tbody.innerHTML = '';
+            
+            cashAccounts.forEach((record, index) => {
+                const tr = createCashAccountRow(record, index);
+                tbody.appendChild(tr);
+            });
+        }
+
+        function createCashAccountRow(record, index) {
+            const tr = document.createElement('tr');
+            tr.className = "hover:bg-gray-50";
+            tr.setAttribute('data-id', record.id);
+            
+            const createSelect = (options, selected) => {
+                let html = `<select class="editable-input text-gray-700" onchange="updateCashAccount(this)">`;
+                options.forEach(opt => html += `<option value="${opt}" ${opt === selected ? 'selected' : ''}>${opt}</option>`);
+                html += `</select>`;
+                return html;
+            };
+            
+            const createMonthSelect = (selected) => {
+                let html = `<select class="editable-input text-gray-700" onchange="updateCashAccount(this)">`;
+                MONTHS.forEach(m => html += `<option value="${m}" ${m === selected ? 'selected' : ''}>${m}</option>`);
+                html += `</select>`;
+                return html;
+            };
+
+            tr.innerHTML = `
+                <td class="px-6 py-4 border-r border-gray-100">${createMonthSelect(record.month)}</td>
+                <td class="px-6 py-4 border-r border-gray-100">${createSelect(cashAcctNames, record.accountName)}</td>
+                <td class="px-6 py-4 border-r border-gray-100">${createSelect(cashAcctCategories, record.category)}</td>
+                <td class="px-6 py-4 border-r border-gray-100 tracker-text" contenteditable="true">${record.institution || 'Bank Name'}</td>
+                <td class="px-6 py-4 text-right tracker-money" contenteditable="true">${formatMoney(record.balance || 0)}</td>
+                <td class="px-2 py-3 text-center">
+                    <button onclick="deleteCashAccount(this)" class="text-gray-300 hover:text-red-500">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                    </button>
+                </td>
+            `;
+            
+            tr.querySelectorAll('[contenteditable="true"]').forEach(cell => {
+                cell.addEventListener('blur', function() {
+                    updateCashAccountFromRow(tr);
+                });
+                cell.addEventListener('keydown', function(e) {
+                    if (e.key === 'Enter') {
+                        e.preventDefault();
+                        this.blur();
+                    }
+                });
+            });
+            
+            return tr;
+        }
+
+        function addCashAccountRow() {
+            const newRecord = {
+                id: Date.now().toString(),
+                month: MONTHS[0],
+                accountName: cashAcctNames[0],
+                category: cashAcctCategories[0],
+                institution: 'Bank Name',
+                balance: 0
+            };
+            
+            cashAccounts.push(newRecord);
+            
+            const tbody = document.getElementById('cash-balances-body');
+            const tr = createCashAccountRow(newRecord, cashAccounts.length - 1);
+            tbody.appendChild(tr);
+            
+            scheduleSave(saveCashAccounts);
+        }
+
+        function updateCashAccount(element) {
+            const tr = element.closest('tr');
+            updateCashAccountFromRow(tr);
+        }
+
+        function updateCashAccountFromRow(tr) {
+            const id = tr.getAttribute('data-id');
+            const index = cashAccounts.findIndex(r => r.id === id);
+            if (index === -1) return;
+            
+            const cells = tr.querySelectorAll('td');
+            cashAccounts[index] = {
+                ...cashAccounts[index],
+                month: cells[0].querySelector('select').value,
+                accountName: cells[1].querySelector('select').value,
+                category: cells[2].querySelector('select').value,
+                institution: cells[3].innerText,
+                balance: parseMoney(cells[4].innerText)
+            };
+            
+            cells[4].innerText = formatMoney(cashAccounts[index].balance);
+            
+            scheduleSave(saveCashAccounts);
+        }
+
+        function deleteCashAccount(btn) {
+            const tr = btn.closest('tr');
+            const id = tr.getAttribute('data-id');
+            
+            cashAccounts = cashAccounts.filter(r => r.id !== id);
+            tr.remove();
+            
+            scheduleSave(saveCashAccounts);
+        }
+
+        function initCashMovement() {
+            const tbody = document.getElementById('cash-movement-body');
+            tbody.innerHTML = '';
+            
+            MONTHS.forEach(month => {
+                const tr = document.createElement('tr');
+                tr.className = "hover:bg-gray-50";
+                tr.setAttribute('data-month', month);
+                
+                const startVal = cashMovement[`${month}_start`] || 0;
+                const endVal = cashMovement[`${month}_end`] || 0;
+                
+                tr.innerHTML = `
+                    <td class="px-6 py-4 font-medium text-gray-900 border-r border-gray-100">${month}</td>
+                    <td class="px-6 py-4 text-right border-r border-gray-100 cash-start" contenteditable="true">${formatMoney(startVal)}</td>
+                    <td class="px-6 py-4 text-right border-r border-gray-100 cash-end" contenteditable="true">${formatMoney(endVal)}</td>
+                    <td class="px-6 py-4 text-right cash-net font-medium">-</td>
+                `;
+                tbody.appendChild(tr);
+            });
+            
+            document.querySelectorAll('.cash-start, .cash-end').forEach(cell => {
+                cell.addEventListener('blur', function() {
+                    const row = this.closest('tr');
+                    const month = row.getAttribute('data-month');
+                    const val = parseMoney(this.innerText);
+                    
+                    if (this.classList.contains('cash-start')) {
+                        cashMovement[`${month}_start`] = val;
+                    } else {
+                        cashMovement[`${month}_end`] = val;
+                    }
+                    
+                    this.innerText = formatMoney(val);
+                    calculateCashMovement();
+                    scheduleSave(saveCashMovement);
+                });
+                cell.addEventListener('keydown', function(e) {
+                    if (e.key === 'Enter') {
+                        e.preventDefault();
+                        this.blur();
+                    }
+                });
+            });
+            
+            calculateCashMovement();
+        }
+
+        function calculateCashMovement() {
+            const rows = document.querySelectorAll('#cash-movement-body tr');
+            rows.forEach(row => {
+                const startCell = row.querySelector('.cash-start');
+                const endCell = row.querySelector('.cash-end');
+                const netCell = row.querySelector('.cash-net');
+                const start = parseMoney(startCell.innerText);
+                const end = parseMoney(endCell.innerText);
+                
+                if(start !== 0 || end !== 0) {
+                    const net = end - start;
+                    const sign = net > 0 ? '+' : '';
+                    netCell.innerText = sign + formatMoney(net);
+                    if(net > 0) netCell.className = "px-6 py-4 text-right cash-net font-medium text-green-600";
+                    else if(net < 0) netCell.className = "px-6 py-4 text-right cash-net font-medium text-red-500";
+                    else netCell.className = "px-6 py-4 text-right cash-net font-medium text-gray-500";
+                } else {
+                    netCell.innerText = '-';
+                    netCell.className = "px-6 py-4 text-right cash-net font-medium text-gray-400";
+                }
+            });
+        }
+
+        // --- CHARTS INIT ---
+        function initCharts() {
+            const ctxTracker = document.getElementById('trackerServiceChart').getContext('2d');
+            window.trackerChart = new Chart(ctxTracker, {
+                type: 'pie',
+                data: { labels: [], datasets: [{ data: [], backgroundColor: ['#34b0e5', '#84d0f0', '#1e6b8c', '#a0e0f8', '#0f4b63'], borderWidth: 2, borderColor: '#ffffff' }] },
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'right', labels: { boxWidth: 10 } } } }
+            });
+            
+            const ctxTrackerBar = document.getElementById('trackerBarChart').getContext('2d');
+            window.trackerBarChart = new Chart(ctxTrackerBar, {
+                type: 'bar',
+                data: { labels: [], datasets: [{ label: 'Total Net Income', data: [], backgroundColor: '#34b0e5', borderRadius: 4 }] },
+                options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false, scales: { x: { beginAtZero: true } }, plugins: { legend: { display: false } } }
+            });
+            
+            const ctxBar = document.getElementById('revenueBarChart').getContext('2d');
+            window.revenueBarChart = new Chart(ctxBar, {
+                type: 'bar',
+                data: { labels: [], datasets: [{ label: 'Net Revenue', data: [], backgroundColor: '#34b0e5', borderRadius: 4 }] },
+                options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true }, x: { grid: { display: false } } }, plugins: { legend: { display: false } } }
+            });
+
+            const ctxPie = document.getElementById('revenuePieChart').getContext('2d');
+            window.revenuePieChart = new Chart(ctxPie, {
+                type: 'doughnut',
+                data: { labels: [], datasets: [{ data: [], backgroundColor: ['#34b0e5', '#84d0f0'], borderWidth: 2, borderColor: '#ffffff' }] },
+                options: { responsive: true, maintainAspectRatio: false, cutout: '65%', plugins: { legend: { position: 'bottom', labels: { boxWidth: 12, padding: 10 } } } }
+            });
+        }
+
+        // --- MASTER INIT ---
+        window.onload = function() {
+            initCharts();
+            loadAllData();
+        };
+    </script>
+</body>
+</html>

@@ -1,0 +1,16 @@
+{
+  "name": "gn-travel-finance-tracker",
+  "version": "1.0.0",
+  "description": "Finance Tracker for GN Travel Marketing LLC",
+  "main": "index.html",
+  "scripts": {
+    "dev": "vercel dev",
+    "deploy": "vercel --prod"
+  },
+  "dependencies": {
+    "@vercel/kv": "^1.0.1"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
