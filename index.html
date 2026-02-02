@@ -3,10 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>FINANCE TRACKER</title>
-    <!-- Chart.js Library -->
+    <title>GN TRAVEL MARKETING LLC FINANCE TRACKER</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <!-- Tailwind CSS for layout utilities -->
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         :root {
@@ -227,21 +225,17 @@
 </head>
 <body class="flex h-screen overflow-hidden min-h-0">
 
-    <!-- Sidebar overlay (mobile): tap to close sidebar -->
     <div id="sidebar-overlay" class="sidebar-overlay" onclick="closeSidebar()" aria-hidden="true"></div>
 
-    <!-- Loading Overlay -->
     <div id="loading-overlay" class="loading-overlay">
         <div class="loading-spinner"></div>
     </div>
 
-    <!-- Save Indicator -->
     <div id="save-indicator" class="save-indicator">
         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
         <span>Saved</span>
     </div>
 
-    <!-- Sidebar -->
     <aside id="sidebar" class="w-64 bg-white border-r border-gray-200 flex-shrink-0 flex flex-col h-full overflow-y-auto lg:translate-x-0" aria-label="Main navigation">
         <div class="p-4 lg:p-6 flex items-center justify-between gap-3">
             <div class="flex items-center gap-3 min-w-0">
@@ -282,15 +276,12 @@
         </div>
     </aside>
 
-    <!-- Main Content Area -->
     <main class="flex-1 overflow-y-auto overflow-x-hidden p-4 sm:p-6 md:p-8 relative min-w-0">
         
-        <!-- Mobile menu button -->
         <button type="button" id="mobile-menu-btn" class="mobile-menu-btn fixed z-20 lg:hidden w-10 h-10 rounded-lg bg-white border border-gray-200 shadow-sm flex items-center justify-center text-gray-600 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-[#34b0e5]/50 top-[calc(1rem+env(safe-area-inset-top))] left-[calc(1rem+env(safe-area-inset-left))]" onclick="toggleSidebar()" aria-label="Open menu">
             <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path></svg>
         </button>
 
-        <!-- HEADER (Shared) -->
         <header class="flex flex-col sm:flex-row sm:flex-wrap sm:justify-between sm:items-center gap-4 mb-6 md:mb-8 pt-14 lg:pt-0">
             <div class="min-w-0">
                 <h1 class="text-xl sm:text-2xl font-bold text-gray-800 truncate" id="page-title">Business Dashboard</h1>
@@ -298,7 +289,6 @@
             </div>
             
             <div class="flex flex-wrap items-center gap-2 sm:gap-3">
-                <!-- Export Button (click to open on touch, hover on desktop) -->
                 <div class="relative" id="export-dropdown-wrap">
                     <button type="button" class="bg-white border border-gray-300 rounded-md px-3 py-2 text-sm shadow-sm flex items-center gap-2 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-[#34b0e5]/50" onclick="toggleExportDropdown(event)" aria-haspopup="true" aria-expanded="false" id="export-btn">
                         <svg class="w-4 h-4 text-gray-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
@@ -311,13 +301,11 @@
                     </div>
                 </div>
 
-                <!-- Currency Toggle -->
                 <div class="bg-white border border-gray-300 rounded-md px-1 py-1 text-sm shadow-sm flex items-center">
                     <button onclick="toggleCurrency('PHP')" id="btn-php" class="px-2 sm:px-3 py-1 rounded text-xs font-bold bg-blue-100 text-blue-600">PHP</button>
                     <button onclick="toggleCurrency('USD')" id="btn-usd" class="px-2 sm:px-3 py-1 rounded text-xs font-bold text-gray-500 hover:bg-gray-50">USD</button>
                 </div>
 
-                <!-- Year Input -->
                 <div class="bg-white border border-gray-300 rounded-md px-2 sm:px-3 py-2 text-sm shadow-sm flex items-center gap-1 sm:gap-2">
                     <svg class="w-4 h-4 text-gray-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
                     <input type="number" id="year-selector" class="year-input" value="2026" onchange="changeYear(this.value)">
@@ -325,9 +313,7 @@
             </div>
         </header>
 
-        <!-- VIEW: DASHBOARD -->
         <section id="view-dashboard" class="pb-8">
-            <!-- KPI Grid -->
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
                 <div class="kpi-card bg-white p-6 rounded-xl shadow-sm hover:shadow-md transition-shadow">
                     <h3 class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Total Net Revenue</h3>
@@ -347,7 +333,6 @@
                 </div>
             </div>
 
-            <!-- Charts Section -->
             <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
                 <div class="lg:col-span-2 bg-white p-6 rounded-xl shadow-sm border border-gray-100">
                     <div class="flex justify-between items-center mb-6">
@@ -368,7 +353,6 @@
                 </div>
             </div>
 
-            <!-- Main Table -->
             <div class="bg-white rounded-xl shadow-sm border border-gray-100 mb-8 overflow-hidden">
                 <div class="p-4 sm:p-6 border-b border-gray-100 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2">
                     <h3 class="text-base sm:text-lg font-bold text-[#34b0e5]">Income & Expenses Breakdown</h3>
@@ -399,7 +383,6 @@
                 </div>
             </div>
 
-            <!-- Business Details Table -->
             <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
                  <div class="p-4 sm:p-6 border-b border-gray-100 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3">
                     <div>
@@ -436,23 +419,18 @@
             </div>
         </section>
 
-        <!-- VIEW: INCOME TRACKER -->
         <section id="view-income" class="hidden pb-8">
-            <!-- Top Grid: KPIs and Pie Chart -->
             <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-                <!-- KPI 1 -->
                 <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex flex-col justify-center items-center text-center">
-                    <h3 class="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-2">Monthly Gross Income</h3>
+                    <h3 class="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-2">Total Gross Income</h3>
                     <div class="text-3xl font-bold text-[#34b0e5]" id="tracker-total-gross">₱0.00</div>
                 </div>
                 
-                <!-- KPI 2 -->
                 <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex flex-col justify-center items-center text-center">
-                    <h3 class="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-2">Monthly Net Income</h3>
+                    <h3 class="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-2">Total Net Income</h3>
                     <div class="text-3xl font-bold text-green-500" id="tracker-total-net">₱0.00</div>
                 </div>
 
-                <!-- Pie Chart -->
                 <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex flex-col items-center justify-center relative">
                     <h3 class="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-2 absolute top-4 left-4">Income by Service</h3>
                     <div class="h-40 w-full flex justify-center mt-6">
@@ -461,7 +439,6 @@
                 </div>
             </div>
 
-            <!-- New Section: Monthly Income Per Service Bar Chart -->
             <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100 mb-8">
                 <h3 class="text-lg font-bold text-[#34b0e5] mb-4">Monthly Income Per Service</h3>
                 <div class="relative h-64 w-full">
@@ -469,7 +446,6 @@
                 </div>
             </div>
 
-            <!-- Detailed Table -->
             <div class="bg-white rounded-xl shadow-sm border border-gray-100 mb-8 overflow-hidden">
                 <div class="p-6 border-b border-gray-100 flex justify-between items-center">
                     <h3 class="text-lg font-bold text-[#34b0e5]">Income Tracker Details</h3>
@@ -496,16 +472,13 @@
                             </tr>
                         </thead>
                         <tbody class="divide-y divide-gray-100" id="tracker-body">
-                            <!-- Rows via JS -->
-                        </tbody>
+                            </tbody>
                     </table>
                 </div>
             </div>
         </section>
 
-        <!-- VIEW: EXPENSES TRACKER -->
         <section id="view-expenses" class="hidden pb-8">
-            <!-- Detailed Table -->
             <div class="bg-white rounded-xl shadow-sm border border-gray-100 mb-8 overflow-hidden flex-1 flex flex-col">
                 <div class="p-6 border-b border-gray-100 flex justify-between items-center">
                     <h3 class="text-lg font-bold text-[#34b0e5]">Expenses Details</h3>
@@ -532,16 +505,13 @@
                             </tr>
                         </thead>
                         <tbody class="divide-y divide-gray-100" id="expenses-body">
-                            <!-- Rows via JS -->
-                        </tbody>
+                            </tbody>
                     </table>
                 </div>
             </div>
         </section>
 
-        <!-- VIEW: CASH OVERVIEW -->
         <section id="view-cash" class="hidden pb-8">
-            <!-- Table 1: Cash Account Balances -->
             <div class="bg-white rounded-xl shadow-sm border border-gray-100 mb-8 overflow-hidden">
                 <div class="p-6 border-b border-gray-100 flex justify-between items-center">
                     <h3 class="text-lg font-bold text-[#34b0e5]">Cash Account Balances</h3>
@@ -563,13 +533,11 @@
                             </tr>
                         </thead>
                         <tbody class="divide-y divide-gray-100" id="cash-balances-body">
-                            <!-- JS will populate -->
-                        </tbody>
+                            </tbody>
                     </table>
                 </div>
             </div>
 
-            <!-- Table 2: Monthly Cash Movement -->
             <div class="bg-white rounded-xl shadow-sm border border-gray-100 mb-8 overflow-hidden">
                 <div class="p-6 border-b border-gray-100 flex justify-between items-center">
                     <h3 class="text-lg font-bold text-[#34b0e5]">Monthly Cash Movement</h3>
@@ -586,8 +554,7 @@
                             </tr>
                         </thead>
                         <tbody class="divide-y divide-gray-100" id="cash-movement-body">
-                            <!-- JS will populate Jan-Dec -->
-                        </tbody>
+                            </tbody>
                     </table>
                 </div>
             </div>
@@ -595,16 +562,13 @@
 
     </main>
 
-    <!-- INVOICE MODAL -->
     <div id="invoice-modal" class="fixed inset-0 hidden items-center justify-center z-50 p-2 sm:p-4">
         <div class="modal-inner bg-white rounded-lg shadow-xl w-full max-w-[800px] max-h-[90vh] overflow-y-auto flex flex-col">
-            <!-- Modal Header -->
             <div class="p-4 border-b flex justify-between items-center bg-gray-50 rounded-t-lg">
                 <h3 class="font-bold text-lg text-gray-800">Generate Invoice</h3>
                 <button onclick="closeInvoice()" class="text-gray-500 hover:text-gray-700">✕</button>
             </div>
             
-            <!-- Invoice Preview -->
             <div class="p-8 bg-white" id="invoice-print-area">
                 <div class="flex justify-between mb-8">
                     <div>
@@ -652,7 +616,6 @@
                 </div>
             </div>
 
-            <!-- Modal Footer -->
             <div class="p-4 border-t bg-gray-50 flex justify-end gap-2 rounded-b-lg">
                 <button onclick="closeInvoice()" class="px-4 py-2 text-gray-600 hover:bg-gray-200 rounded">Close</button>
                 <button onclick="window.print()" class="px-4 py-2 bg-[#34b0e5] text-white rounded hover:bg-blue-500 flex items-center gap-2">
@@ -847,12 +810,21 @@
 
             calculateDashboard();
             updateIncomeTracker();
+            renderIncomeTable();
+            renderExpenseTable();
             calculateCashMovement();
         }
 
         function changeYear(year) {
             currentYear = parseInt(year);
             document.getElementById('year-selector').value = year;
+            
+            // Refresh views to apply year filter
+            initDashboard(); // Re-initialize dashboard to load year-specific data
+            renderIncomeTable();
+            renderExpenseTable();
+            updateIncomeTracker();
+            calculateDashboard(); // Re-calculate KPIs
         }
 
         // --- DEBOUNCED SAVE ---
@@ -1020,7 +992,15 @@
             });
 
             document.getElementById('nav-' + viewId).classList.add('active');
-            document.getElementById('page-title').innerText = viewId.charAt(0).toUpperCase() + viewId.slice(1) + (viewId === 'dashboard' ? ' Dashboard' : ' Tracker');
+            
+            // --- FIX FOR TITLE BUG ---
+            const titles = {
+                'dashboard': 'Business Dashboard',
+                'income': 'Income Tracker',
+                'expenses': 'Expenses Tracker',
+                'cash': 'Cash Overview'
+            };
+            document.getElementById('page-title').innerText = titles[viewId] || 'Finance Tracker';
             
             if(viewId === 'income') updateIncomeTracker();
             if(viewId === 'dashboard') calculateDashboard();
@@ -1144,7 +1124,8 @@
             MONTHS.forEach((month, index) => {
                 const trMain = document.createElement('tr');
                 trMain.className = "hover:bg-gray-50";
-                const expenseVal = dashboardExpenses[month] || 0;
+                // YEAR-AWARE KEY
+                const expenseVal = dashboardExpenses[currentYear + '_' + month] || 0;
                 trMain.innerHTML = `<td class="px-6 py-4 font-medium text-gray-900 border-r border-gray-100">${month}</td><td class="px-6 py-4 text-right bg-gray-50 text-gray-500 income-cell">₱0</td><td class="px-6 py-4 text-right expense-cell" contenteditable="true" data-month="${month}">${formatMoney(expenseVal)}</td><td class="px-6 py-4 text-right net-cell">-</td><td class="px-6 py-4 text-right margin-cell">-</td>`;
                 mainBody.appendChild(trMain);
                 
@@ -1189,7 +1170,8 @@
                 const newTd = document.createElement('td');
                 newTd.className = "px-6 py-4 text-right";
                 newTd.contentEditable = "true";
-                const savedVal = businessData[`${name}_${month}`] || 0;
+                // YEAR-AWARE KEY
+                const savedVal = businessData[currentYear + '_' + name + '_' + month] || 0;
                 newTd.innerText = formatMoney(savedVal);
                 newTd.setAttribute('data-column', name);
                 newTd.setAttribute('data-month', month);
@@ -1197,7 +1179,8 @@
                     const val = parseMoney(this.innerText);
                     const colName = this.getAttribute('data-column');
                     const monthName = this.getAttribute('data-month');
-                    businessData[`${colName}_${monthName}`] = val;
+                    // SAVE WITH YEAR
+                    businessData[currentYear + '_' + colName + '_' + monthName] = val;
                     this.innerText = formatMoney(val);
                     calculateDashboard();
                     scheduleSave(saveBusinessData);
@@ -1229,7 +1212,7 @@
             // Store for restore
             const colData = {};
             MONTHS.forEach(month => {
-                colData[month] = businessData[`${colName}_${month}`] || 0;
+                colData[month] = businessData[currentYear + '_' + colName + '_' + month] || 0;
             });
             deletedColumns.push({ name: colName, data: colData, index: colIndex - 1 });
             
@@ -1271,7 +1254,7 @@
             
             // Restore data
             MONTHS.forEach(month => {
-                businessData[`${restored.name}_${month}`] = restored.data[month];
+                businessData[currentYear + '_' + restored.name + '_' + month] = restored.data[month];
             });
             
             // Rebuild UI
@@ -1290,7 +1273,8 @@
                 cell.addEventListener('blur', function() {
                     const val = parseMoney(this.innerText);
                     const month = this.getAttribute('data-month');
-                    dashboardExpenses[month] = val;
+                    // SAVE WITH YEAR
+                    dashboardExpenses[currentYear + '_' + month] = val;
                     this.innerText = formatMoney(val);
                     calculateDashboard();
                     scheduleSave(saveBusinessData);
@@ -1313,9 +1297,13 @@
             const tbody = document.getElementById('tracker-body');
             tbody.innerHTML = '';
             
+            // Filter records by selected year
             incomeRecords.forEach((record, index) => {
-                const tr = createIncomeRow(record, index);
-                tbody.appendChild(tr);
+                const recordYear = new Date(record.date).getFullYear();
+                if (!record.date || recordYear === currentYear) {
+                    const tr = createIncomeRow(record, index);
+                    tbody.appendChild(tr);
+                }
             });
             
             updateIncomeTracker();
@@ -1387,11 +1375,8 @@
             
             incomeRecords.push(newRecord);
             
-            const tbody = document.getElementById('tracker-body');
-            const tr = createIncomeRow(newRecord, incomeRecords.length - 1);
-            tbody.appendChild(tr);
-            
-            updateIncomeTracker();
+            // Re-render table completely to ensure sorting/filtering is correct
+            renderIncomeTable();
             scheduleSave(saveIncomeRecords);
         }
 
@@ -1445,11 +1430,15 @@
             let serviceTotals = {};
             serviceOptions.forEach(s => serviceTotals[s] = 0);
 
+            // Filter logic for KPIs and Charts based on YEAR
             incomeRecords.forEach(record => {
-                totalGross += record.gross || 0;
-                totalNet += record.net || 0;
-                if (serviceTotals[record.serviceType] !== undefined) {
-                    serviceTotals[record.serviceType] += record.net || 0;
+                const recordYear = new Date(record.date).getFullYear();
+                if (!record.date || recordYear === currentYear) {
+                    totalGross += record.gross || 0;
+                    totalNet += record.net || 0;
+                    if (serviceTotals[record.serviceType] !== undefined) {
+                        serviceTotals[record.serviceType] += record.net || 0;
+                    }
                 }
             });
 
@@ -1481,8 +1470,11 @@
             tbody.innerHTML = '';
             
             expenseRecords.forEach((record, index) => {
-                const tr = createExpenseRow(record, index);
-                tbody.appendChild(tr);
+                const recordYear = new Date(record.date).getFullYear();
+                if (!record.date || recordYear === currentYear) {
+                    const tr = createExpenseRow(record, index);
+                    tbody.appendChild(tr);
+                }
             });
         }
 
@@ -1548,10 +1540,7 @@
             
             expenseRecords.push(newRecord);
             
-            const tbody = document.getElementById('expenses-body');
-            const tr = createExpenseRow(newRecord, expenseRecords.length - 1);
-            tbody.appendChild(tr);
-            
+            renderExpenseTable();
             scheduleSave(saveExpenseRecords);
         }
 
@@ -1820,6 +1809,3 @@
     </script>
 </body>
 </html>
-
-
-
