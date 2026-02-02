@@ -16,9 +16,10 @@
             --text-light: #64748b;
         }
 
-        /* --- STATIC BACKGROUND --- */
+        /* --- STATIC BACKGROUND (Needed for Glass effect) --- */
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            /* Soft, static gradient to make the glass effect visible */
             background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 50%, #f5f3ff 100%);
             color: var(--text-dark);
             min-height: 100vh;
@@ -26,28 +27,20 @@
             padding-right: env(safe-area-inset-right);
         }
 
-        /* --- GLASSMORPHISM --- */
+        /* --- GLASSMORPHISM CLASSES --- */
         .glass {
-            background: rgba(255, 255, 255, 0.75);
-            backdrop-filter: blur(12px);
+            background: rgba(255, 255, 255, 0.75); /* Higher opacity for readability */
+            backdrop-filter: blur(12px);            /* The "Frost" */
             -webkit-backdrop-filter: blur(12px);
             border: 1px solid rgba(255, 255, 255, 0.6);
             box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
         }
 
-        /* Header specific glass */
-        .glass-header {
-            background: rgba(255, 255, 255, 0.85);
-            backdrop-filter: blur(16px);
-            -webkit-backdrop-filter: blur(16px);
-            border-bottom: 1px solid rgba(255, 255, 255, 0.6);
-            box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.05);
-        }
-
-        /* Sidebar specific glass (Mobile Only) */
+        /* Sidebar specific glass */
         .glass-sidebar {
-            background: rgba(255, 255, 255, 0.95);
-            backdrop-filter: blur(16px);
+            background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
             border-right: 1px solid rgba(255, 255, 255, 0.6);
         }
 
@@ -57,18 +50,14 @@
         .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
         .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
 
-        /* Nav Link Active States */
-        .nav-link.active, .nav-top-link.active {
+        /* Sidebar Link Active State */
+        .nav-link { cursor: pointer; transition: all 0.2s ease; }
+        .nav-link:hover { background: rgba(255,255,255,0.6); }
+        .nav-link.active {
             background: rgba(52, 176, 229, 0.15);
             color: var(--primary-blue);
-            font-weight: 700;
-        }
-        
-        /* Top Nav Specific */
-        .nav-top-link.active {
-            border-bottom: 2px solid var(--primary-blue);
-            border-radius: 0.5rem 0.5rem 0 0; /* Rounded top only */
-            background: linear-gradient(to top, rgba(52, 176, 229, 0.1), transparent);
+            border-right: 3px solid var(--primary-blue);
+            font-weight: 600;
         }
 
         .kpi-card { border-top: 4px solid var(--primary-blue); }
@@ -145,20 +134,18 @@
         /* Mobile */
         @media (max-width: 1023px) {
             #sidebar {
-                position: fixed; left: 0; top: 0; z-index: 50; height: 100%;
+                position: fixed; left: 0; top: 0; z-index: 40; height: 100%;
                 transform: translateX(-100%); transition: transform 0.25s ease-out;
             }
             #sidebar.sidebar-open { transform: translateX(0); box-shadow: 4px 0 20px rgba(0,0,0,0.1); }
             #sidebar-overlay {
                 display: none; position: fixed; inset: 0;
-                background: rgba(0,0,0,0.3); backdrop-filter: blur(2px); z-index: 40;
+                background: rgba(0,0,0,0.3); backdrop-filter: blur(2px); z-index: 30;
             }
             #sidebar-overlay.sidebar-open { display: block; }
             .mobile-menu-btn { display: flex; }
         }
-        @media (min-width: 1024px) { 
-            .mobile-menu-btn { display: none; } 
-        }
+        @media (min-width: 1024px) { .mobile-menu-btn { display: none; } }
         
         @media print {
             body { background: white; }
@@ -168,95 +155,95 @@
         }
     </style>
 </head>
-<body class="flex flex-col h-screen overflow-hidden">
+<body class="flex h-screen overflow-hidden min-h-0">
 
     <div id="sidebar-overlay" class="sidebar-overlay" onclick="closeSidebar()" aria-hidden="true"></div>
-    <div id="loading-overlay" class="loading-overlay"><div class="loading-spinner"></div></div>
+
+    <div id="loading-overlay" class="loading-overlay">
+        <div class="loading-spinner"></div>
+    </div>
+
     <div id="save-indicator" class="save-indicator">
         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
         <span>Saved</span>
     </div>
 
-    <header class="glass-header z-30 px-4 py-3 flex justify-between items-center flex-shrink-0">
-        <div class="flex items-center gap-3">
-            <button type="button" class="mobile-menu-btn lg:hidden w-9 h-9 rounded-lg flex items-center justify-center text-slate-500 hover:bg-slate-100" onclick="toggleSidebar()">
-                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path></svg>
-            </button>
-            <img src="GN ICON.png" alt="GN Logo" class="w-10 h-10 rounded-lg object-contain shadow-sm">
-            <div class="flex flex-col justify-center">
-                <span class="text-[10px] font-bold text-slate-500 uppercase tracking-tight leading-tight hidden sm:block">GN TRAVEL MARKETING LLC</span>
-                <span class="text-base sm:text-lg font-extrabold text-[#34b0e5] leading-none tracking-tight">FINANCE TRACKER</span>
-            </div>
-        </div>
-
-        <nav class="hidden lg:flex items-center gap-2">
-            <button onclick="switchView('dashboard')" class="nav-top-link px-4 py-2 text-sm font-semibold rounded-lg text-slate-600 hover:bg-white/60 hover:text-[#34b0e5] transition-all" data-target="dashboard">Dashboard</button>
-            <button onclick="switchView('income')" class="nav-top-link px-4 py-2 text-sm font-semibold rounded-lg text-slate-600 hover:bg-white/60 hover:text-[#34b0e5] transition-all" data-target="income">Income</button>
-            <button onclick="switchView('expenses')" class="nav-top-link px-4 py-2 text-sm font-semibold rounded-lg text-slate-600 hover:bg-white/60 hover:text-[#34b0e5] transition-all" data-target="expenses">Expenses</button>
-            <button onclick="switchView('cash')" class="nav-top-link px-4 py-2 text-sm font-semibold rounded-lg text-slate-600 hover:bg-white/60 hover:text-[#34b0e5] transition-all" data-target="cash">Cash Flow</button>
-        </nav>
-
-        <div class="flex items-center gap-2 sm:gap-3">
-            <div class="relative" id="export-dropdown-wrap">
-                <button type="button" class="glass rounded-lg px-3 py-2 text-sm shadow-sm flex items-center gap-2 hover:bg-white/80 transition-all text-slate-700 font-medium" onclick="toggleExportDropdown(event)" id="export-btn">
-                    <svg class="w-4 h-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
-                    <span class="hidden sm:inline">Export</span>
-                </button>
-                <div id="export-dropdown" class="absolute right-0 mt-2 w-48 glass rounded-lg shadow-xl border border-white/60 z-50 hidden">
-                    <a href="#" onclick="exportToCSV('income'); closeExportDropdown(); return false;" class="block px-4 py-2 text-sm text-gray-700 hover:bg-white/50 first:rounded-t-lg">Export Income</a>
-                    <a href="#" onclick="exportToCSV('expenses'); closeExportDropdown(); return false;" class="block px-4 py-2 text-sm text-gray-700 hover:bg-white/50">Export Expenses</a>
-                    <a href="#" onclick="exportToCSV('cash'); closeExportDropdown(); return false;" class="block px-4 py-2 text-sm text-gray-700 hover:bg-white/50 last:rounded-b-lg">Export Cash Flow</a>
+    <aside id="sidebar" class="w-64 glass-sidebar flex-shrink-0 flex flex-col h-full overflow-y-auto lg:translate-x-0" aria-label="Main navigation">
+        <div class="p-4 lg:p-6 flex items-center justify-between gap-3">
+            <div class="flex items-center gap-3 min-w-0">
+                <img src="GN ICON.png" alt="GN Logo" class="w-10 h-10 rounded-lg object-contain flex-shrink-0 shadow-sm">
+                <div class="flex flex-col justify-center overflow-hidden min-w-0">
+                    <span class="text-[10px] font-bold text-slate-500 uppercase tracking-tight leading-tight whitespace-nowrap truncate">GN TRAVEL MARKETING LLC</span>
+                    <span class="text-[15px] font-extrabold text-[#34b0e5] leading-none whitespace-nowrap truncate">FINANCE TRACKER</span>
                 </div>
             </div>
-
-            <div class="glass rounded-lg px-1 py-1 text-sm shadow-sm flex items-center">
-                <button onclick="toggleCurrency('PHP')" id="btn-php" class="px-2 sm:px-3 py-1 rounded-md text-xs font-bold bg-blue-100 text-blue-600 transition-colors">PHP</button>
-                <button onclick="toggleCurrency('USD')" id="btn-usd" class="px-2 sm:px-3 py-1 rounded-md text-xs font-bold text-gray-500 hover:bg-white/50 transition-colors">USD</button>
-            </div>
-
-            <div class="glass rounded-lg px-2 py-2 text-sm shadow-sm flex items-center gap-1">
-                <svg class="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
-                <input type="number" id="year-selector" class="year-input bg-transparent font-bold text-slate-700 w-12 focus:outline-none" value="2026" onchange="changeYear(this.value)">
-            </div>
+            <button type="button" class="lg:hidden w-9 h-9 rounded-lg flex items-center justify-center text-slate-500 hover:bg-slate-100/50" onclick="closeSidebar()">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+            </button>
         </div>
-    </header>
-
-    <aside id="sidebar" class="w-64 glass-sidebar flex-shrink-0 flex flex-col h-full lg:hidden" aria-label="Main navigation">
-        <div class="p-4 border-b border-slate-200/50 flex justify-between items-center">
-            <span class="font-bold text-slate-700">Menu</span>
-            <button class="w-8 h-8 rounded-lg flex items-center justify-center text-slate-500 hover:bg-slate-100" onclick="closeSidebar()">✕</button>
-        </div>
+        
         <nav class="flex-1 px-4 space-y-2 mt-4">
-            <div onclick="switchView('dashboard')" class="nav-link px-4 py-3 text-sm font-medium rounded-xl flex items-center" data-target="dashboard">
+            <div onclick="switchView('dashboard')" id="nav-dashboard" class="nav-link active flex items-center px-4 py-3 text-sm font-medium rounded-xl">
                 <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"></path></svg>
                 Dashboard
             </div>
-            <div onclick="switchView('income')" class="nav-link px-4 py-3 text-sm font-medium rounded-xl flex items-center" data-target="income">
+            <div onclick="switchView('income')" id="nav-income" class="nav-link text-slate-600 flex items-center px-4 py-3 text-sm font-medium rounded-xl">
                 <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
                 Income Tracker
             </div>
-            <div onclick="switchView('expenses')" class="nav-link px-4 py-3 text-sm font-medium rounded-xl flex items-center" data-target="expenses">
+            <div onclick="switchView('expenses')" id="nav-expenses" class="nav-link text-slate-600 flex items-center px-4 py-3 text-sm font-medium rounded-xl">
                 <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 14l6-6m-5.5.5h.01m4.99 5h.01M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16l3.5-2 3.5 2 3.5-2 3.5 2z"></path></svg>
                 Expenses Tracker
             </div>
-            <div onclick="switchView('cash')" class="nav-link px-4 py-3 text-sm font-medium rounded-xl flex items-center" data-target="cash">
+            <div onclick="switchView('cash')" id="nav-cash" class="nav-link text-slate-600 flex items-center px-4 py-3 text-sm font-medium rounded-xl">
                 <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
                 Cash Overview
             </div>
         </nav>
-        <div class="p-4 border-t border-slate-200/50 mt-auto">
+        
+        <div class="p-4 border-t border-slate-200/60">
             <div class="text-xs text-slate-400 text-center">
-                <span id="sync-status-mobile" class="text-green-500">●</span> Auto-saving enabled
+                <span id="sync-status" class="text-green-500">●</span> Auto-saving enabled
             </div>
         </div>
     </aside>
 
-    <main class="flex-1 overflow-y-auto overflow-x-hidden p-4 sm:p-6 md:p-8 relative min-w-0 w-full">
+    <main class="flex-1 overflow-y-auto overflow-x-hidden p-4 sm:p-6 md:p-8 relative min-w-0">
         
-        <div id="page-header-mobile" class="lg:hidden mb-6">
-            <h1 class="text-xl font-extrabold text-slate-800" id="page-title">Business Dashboard</h1>
-            <p class="text-xs text-slate-500 font-medium">Daily and monthly report in a glance</p>
-        </div>
+        <button type="button" id="mobile-menu-btn" class="mobile-menu-btn fixed z-20 lg:hidden w-10 h-10 rounded-lg glass flex items-center justify-center text-slate-600 top-[calc(1rem+env(safe-area-inset-top))] left-[calc(1rem+env(safe-area-inset-left))]" onclick="toggleSidebar()">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path></svg>
+        </button>
+
+        <header class="flex flex-col sm:flex-row sm:flex-wrap sm:justify-between sm:items-center gap-4 mb-6 md:mb-8 pt-14 lg:pt-0">
+            <div class="min-w-0">
+                <h1 class="text-xl sm:text-2xl font-extrabold text-slate-800 truncate tracking-tight" id="page-title">Business Dashboard</h1>
+                <p class="text-xs sm:text-sm text-slate-500 font-medium" id="page-subtitle">Daily and monthly report in a glance</p>
+            </div>
+            
+            <div class="flex flex-wrap items-center gap-2 sm:gap-3">
+                <div class="relative" id="export-dropdown-wrap">
+                    <button type="button" class="glass rounded-lg px-4 py-2 text-sm shadow-sm flex items-center gap-2 hover:bg-white/80 transition-all text-slate-700 font-medium" onclick="toggleExportDropdown(event)" id="export-btn">
+                        <svg class="w-4 h-4 text-slate-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+                        <span>Export</span>
+                    </button>
+                    <div id="export-dropdown" class="absolute right-0 mt-2 w-48 glass rounded-lg shadow-xl border border-white/60 z-50 hidden">
+                        <a href="#" onclick="exportToCSV('income'); closeExportDropdown(); return false;" class="block px-4 py-2 text-sm text-gray-700 hover:bg-white/50 first:rounded-t-lg">Export Income</a>
+                        <a href="#" onclick="exportToCSV('expenses'); closeExportDropdown(); return false;" class="block px-4 py-2 text-sm text-gray-700 hover:bg-white/50">Export Expenses</a>
+                        <a href="#" onclick="exportToCSV('cash'); closeExportDropdown(); return false;" class="block px-4 py-2 text-sm text-gray-700 hover:bg-white/50 last:rounded-b-lg">Export Cash Flow</a>
+                    </div>
+                </div>
+
+                <div class="glass rounded-lg px-1 py-1 text-sm shadow-sm flex items-center">
+                    <button onclick="toggleCurrency('PHP')" id="btn-php" class="px-3 py-1 rounded-md text-xs font-bold bg-blue-100 text-blue-600 transition-colors">PHP</button>
+                    <button onclick="toggleCurrency('USD')" id="btn-usd" class="px-3 py-1 rounded-md text-xs font-bold text-gray-500 hover:bg-white/50 transition-colors">USD</button>
+                </div>
+
+                <div class="glass rounded-lg px-3 py-2 text-sm shadow-sm flex items-center gap-2">
+                    <svg class="w-4 h-4 text-gray-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                    <input type="number" id="year-selector" class="year-input bg-transparent font-bold text-slate-700 w-12 focus:outline-none" value="2026" onchange="changeYear(this.value)">
+                </div>
+            </div>
+        </header>
 
         <section id="view-dashboard" class="pb-8">
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
@@ -572,13 +559,14 @@
         const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
         const API_BASE = '/api';
 
-        // --- MOBILE SIDEBAR LOGIC ---
+        // --- MOBILE SIDEBAR ---
         function toggleSidebar() {
             const sidebar = document.getElementById('sidebar');
             const overlay = document.getElementById('sidebar-overlay');
             if (!sidebar || !overlay) return;
             sidebar.classList.toggle('sidebar-open');
             overlay.classList.toggle('sidebar-open');
+            overlay.setAttribute('aria-hidden', sidebar.classList.contains('sidebar-open') ? 'false' : 'true');
         }
         function closeSidebar() {
             const sidebar = document.getElementById('sidebar');
@@ -586,6 +574,7 @@
             if (!sidebar || !overlay) return;
             sidebar.classList.remove('sidebar-open');
             overlay.classList.remove('sidebar-open');
+            overlay.setAttribute('aria-hidden', 'true');
         }
 
         // --- EXPORT DROPDOWN ---
@@ -900,32 +889,17 @@
 
         function switchView(viewId) {
             const titles = { 'dashboard': 'Business Dashboard', 'income': 'Income Tracker', 'expenses': 'Expenses Tracker', 'cash': 'Cash Overview' };
-            
-            // Only update page title element if exists on desktop view (handled in header now)
-            const titleEl = document.getElementById('page-title');
-            if (titleEl && window.innerWidth < 1024) {
-               titleEl.innerText = titles[viewId] || 'Finance Tracker';
-            }
+            document.getElementById('page-title').innerText = titles[viewId] || 'Finance Tracker';
             
             document.querySelectorAll('section[id^="view-"]').forEach(el => el.classList.add('hidden'));
             document.getElementById('view-' + viewId).classList.remove('hidden');
 
-            // Reset active states for both mobile sidebar and desktop top nav
-            document.querySelectorAll('.nav-link, .nav-top-link').forEach(el => {
+            document.querySelectorAll('.nav-link').forEach(el => {
                 el.classList.remove('active');
-                if (el.classList.contains('nav-link')) el.classList.add('text-slate-600');
-                if (el.classList.contains('nav-top-link')) el.classList.add('text-slate-600');
+                el.classList.add('text-slate-600');
             });
 
-            // Set active state for clicked view in both menus
-            const activeMobile = document.querySelector(`.nav-link[data-target="${viewId}"]`);
-            const activeDesktop = document.querySelector(`.nav-top-link[data-target="${viewId}"]`);
-            
-            if (activeMobile) activeMobile.classList.add('active');
-            if (activeDesktop) {
-                activeDesktop.classList.add('active');
-                activeDesktop.classList.remove('text-slate-600');
-            }
+            document.getElementById('nav-' + viewId).classList.add('active');
             
             if(viewId === 'income') updateIncomeTracker();
             if(viewId === 'dashboard') calculateDashboard();
@@ -1590,3 +1564,4 @@
     </script>
 </body>
 </html>
+
