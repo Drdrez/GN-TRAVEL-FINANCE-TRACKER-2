@@ -678,7 +678,7 @@
             }
         });
         let currentCurrency = 'PHP';
-        const exchangeRate = 58;
+        let exchangeRate = 58; // Default fallback value
         let currentYear = new Date().getFullYear();
 
         // --- DATA STORES ---
@@ -766,6 +766,38 @@
             }
         }
 
+                // --- LIVE CURRENCY FETCHER ---
+        async function fetchLiveExchangeRate() {
+            try {
+                // Using a free open API (updates daily)
+                const response = await fetch('https://open.er-api.com/v6/latest/USD');
+                const data = await response.json();
+                
+                if (data && data.rates && data.rates.PHP) {
+                    exchangeRate = data.rates.PHP;
+                    console.log('Live Exchange Rate Fetched:', exchangeRate);
+                    
+                    // Update the USD button tooltip to show the real rate
+                    const usdBtn = document.getElementById('btn-usd');
+                    if (usdBtn) {
+                        usdBtn.setAttribute('title', `Current Rate: ₱${exchangeRate.toFixed(2)} = $1 USD`);
+                        // Optional: Add a small indicator text if desired
+                    }
+        
+                    // If user is currently viewing USD, refresh the numbers immediately
+                    if (currentCurrency === 'USD') {
+                        calculateDashboard();
+                        updateIncomeTracker();
+                        renderIncomeTable();
+                        renderExpenseTable();
+                        calculateCashMovement();
+                    }
+                }
+            } catch (error) {
+                console.warn('Failed to fetch live rate, using default 58.', error);
+            }
+        }
+                
         function showSaveIndicator(isError = false) {
             const indicator = document.getElementById('save-indicator');
             indicator.classList.remove('error');
@@ -1808,9 +1840,11 @@
         window.onload = function() {
             initCharts();
             loadAllData();
+            fetchLiveExchangeRate();
         };
     </script>
 </body>
 </html>
+
 
 
