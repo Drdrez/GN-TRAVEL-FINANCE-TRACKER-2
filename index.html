@@ -640,6 +640,9 @@
         // --- CONFIG ---
         const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
         const API_BASE = '/api';
+        
+        // Default view tracking
+        let currentView = 'dashboard';
 
         // --- MOBILE SIDEBAR ---
         function toggleSidebar() {
@@ -673,7 +676,7 @@
         let businessData = {};
         let dashboardExpenses = {};
         
-        // UPDATED: Use LocalStorage for deleted columns memory
+        // Persistent Memory for deleted columns
         let deletedColumns = JSON.parse(localStorage.getItem('deletedColumns_GN')) || [];
 
         // --- PAGINATION STATE ---
@@ -812,7 +815,6 @@
             return symbol + val.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
         }
 
-        // UPDATED: Secure toggleCurrency to prevent editing corruption
         function toggleCurrency(curr) {
             if(curr === currentCurrency) return;
             currentCurrency = curr;
@@ -866,33 +868,53 @@
             saveTimeout = setTimeout(saveFunction, SAVE_DELAY);
         }
 
-        // --- NEW: CSV EXPORT FUNCTION ---
+        // --- NEW: SMART CSV EXPORT (CONTEXT AWARE) ---
         function exportToCSV() {
-            // 1. Setup Headers
             let csvContent = "data:text/csv;charset=utf-8,";
-            csvContent += "TYPE,DATE,CLIENT/VENDOR,CATEGORY/SERVICE,AMOUNT,STATUS,NOTES\n";
+            let filename = "Export.csv";
+            const clean = (text) => (text || "").replace(/,/g, " ").replace(/\n/g, " ");
 
-            // 2. Add Income Data
-            incomeRecords.forEach(row => {
-                const client = (row.clientName || "").replace(/,/g, " ");
-                const notes = (row.notes || "").replace(/,/g, " ");
-                const cleanAmount = row.net || 0;
-                csvContent += `INCOME,${row.date},${client},${row.serviceType},${cleanAmount},${row.status},${notes}\n`;
-            });
+            if (currentView === 'income') {
+                // EXPORT INCOME ONLY
+                csvContent += "Date,Client Name,Service Type,Pricing Model,Gross,Net,Payment Mode,Status,Ref ID,Notes\n";
+                incomeRecords.forEach(row => {
+                    csvContent += `${row.date},${clean(row.clientName)},${clean(row.serviceType)},${clean(row.pricingModel)},${row.gross},${row.net},${clean(row.paymentMode)},${clean(row.status)},${clean(row.refId)},${clean(row.notes)}\n`;
+                });
+                filename = `Income_Data_${new Date().toISOString().slice(0,10)}.csv`;
 
-            // 3. Add Expense Data
-            expenseRecords.forEach(row => {
-                const vendor = (row.vendor || "").replace(/,/g, " ");
-                const notes = (row.notes || "").replace(/,/g, " ");
-                const cleanAmount = row.amount || 0;
-                csvContent += `EXPENSE,${row.date},${vendor},${row.category},-${cleanAmount},${row.status},${notes}\n`;
-            });
+            } else if (currentView === 'expenses') {
+                // EXPORT EXPENSES ONLY
+                csvContent += "Date,Vendor,Category,Type,Service,Amount,Payment,Status,Recurring,Notes\n";
+                expenseRecords.forEach(row => {
+                    csvContent += `${row.date},${clean(row.vendor)},${clean(row.category)},${clean(row.type)},${clean(row.service)},${row.amount},${clean(row.payment)},${clean(row.status)},${clean(row.recurring)},${clean(row.notes)}\n`;
+                });
+                filename = `Expenses_Data_${new Date().toISOString().slice(0,10)}.csv`;
 
-            // 4. Trigger Download
+            } else if (currentView === 'cash') {
+                // EXPORT CASH ACCOUNTS ONLY
+                csvContent += "Month,Account Name,Category,Institution,Balance\n";
+                cashAccounts.forEach(row => {
+                    csvContent += `${clean(row.month)},${clean(row.accountName)},${clean(row.category)},${clean(row.institution)},${row.balance}\n`;
+                });
+                filename = `Cash_Data_${new Date().toISOString().slice(0,10)}.csv`;
+
+            } else {
+                // DASHBOARD: EXPORT EVERYTHING
+                csvContent += "TYPE,DATE,CLIENT/VENDOR,CATEGORY/SERVICE,AMOUNT,STATUS,NOTES\n";
+                incomeRecords.forEach(row => {
+                    csvContent += `INCOME,${row.date},${clean(row.clientName)},${clean(row.serviceType)},${row.net},${clean(row.status)},${clean(row.notes)}\n`;
+                });
+                expenseRecords.forEach(row => {
+                    csvContent += `EXPENSE,${row.date},${clean(row.vendor)},${clean(row.category)},-${row.amount},${clean(row.status)},${clean(row.notes)}\n`;
+                });
+                filename = `All_Business_Data_${new Date().toISOString().slice(0,10)}.csv`;
+            }
+
+            // Trigger Download
             const encodedUri = encodeURI(csvContent);
             const link = document.createElement("a");
             link.setAttribute("href", encodedUri);
-            link.setAttribute("download", `GN_Finance_Data_${new Date().toISOString().slice(0,10)}.csv`);
+            link.setAttribute("download", filename);
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
@@ -985,6 +1007,9 @@
         }
 
         function switchView(viewId) {
+            // Track current view for Export logic
+            currentView = viewId;
+
             const titles = { 'dashboard': 'Business Dashboard', 'income': 'Income Tracker', 'expenses': 'Expenses Tracker', 'cash': 'Cash Overview' };
             document.getElementById('page-title').innerText = titles[viewId] || 'Finance Tracker';
             
