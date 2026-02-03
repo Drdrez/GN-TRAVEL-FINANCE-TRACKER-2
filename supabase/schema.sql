@@ -70,6 +70,28 @@ INSERT INTO business_config (id, columns, business_data, dashboard_expenses)
 VALUES (1, '["Service A", "Service B"]', '{}', '{}')
 ON CONFLICT (id) DO NOTHING;
 
+-- Table for detailed Payroll Slips
+CREATE TABLE IF NOT EXISTS payroll_records (
+  id TEXT PRIMARY KEY,
+  payout_date DATE,
+  employee_name TEXT DEFAULT '',
+  role_position TEXT DEFAULT '',
+  project_client TEXT DEFAULT '',
+  employment_type TEXT DEFAULT 'Part-Time',
+  pay_period TEXT DEFAULT '',
+  rate NUMERIC DEFAULT 0,
+  total_hours NUMERIC DEFAULT 0,
+  base_pay NUMERIC DEFAULT 0,
+  bonus_incentives NUMERIC DEFAULT 0,
+  deductions NUMERIC DEFAULT 0,
+  total_payout NUMERIC DEFAULT 0,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Enable security (optional, based on your previous setup)
+ALTER TABLE payroll_records ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Allow all for payroll_records" ON payroll_records FOR ALL USING (true) WITH CHECK (true);
 -- Enable RLS but allow all for server-side use with service role key
 -- If you use anon key, add policies. With service_role key, RLS is bypassed.
 ALTER TABLE income_records ENABLE ROW LEVEL SECURITY;
@@ -85,3 +107,4 @@ CREATE POLICY "Allow all for expense_records" ON expense_records FOR ALL USING (
 CREATE POLICY "Allow all for cash_accounts" ON cash_accounts FOR ALL USING (true) WITH CHECK (true);
 CREATE POLICY "Allow all for cash_movement" ON cash_movement FOR ALL USING (true) WITH CHECK (true);
 CREATE POLICY "Allow all for business_config" ON business_config FOR ALL USING (true) WITH CHECK (true);
+
