@@ -914,6 +914,7 @@
             // Reset pagination on filter change
             pgIncome = 1;
             pgExpense = 1;
+            renderAllTables(); // Force redraw tables
             renderIncomeTable();
             renderExpenseTable();
             updateIncomeTracker();
@@ -989,34 +990,34 @@
         async function loadAllData() {
             document.getElementById('loading-overlay').style.display = 'flex';
             try {
-                const incomeData = await apiGet('income');
+                // Parallel fetching for speed
+                const [incomeData, expenseData, cashAccountsData, cashMovementData, businessDataResult] = await Promise.all([
+                    apiGet('income'),
+                    apiGet('expenses'),
+                    apiGet('cash?type=accounts'),
+                    apiGet('cash?type=movement'),
+                    apiGet('business')
+                ]);
+
                 if (incomeData) incomeRecords = incomeData;
-
-                const expenseData = await apiGet('expenses');
                 if (expenseData) expenseRecords = expenseData;
-
-                const cashAccountsData = await apiGet('cash?type=accounts');
                 if (cashAccountsData) cashAccounts = cashAccountsData;
-
-                const cashMovementData = await apiGet('cash?type=movement');
                 if (cashMovementData) cashMovement = cashMovementData;
 
-                const businessDataResult = await apiGet('business');
                 if (businessDataResult) {
                     businessColumns = businessDataResult.columns || ['Service A', 'Service B'];
                     businessData = businessDataResult.businessData || {};
                     dashboardExpenses = businessDataResult.dashboardExpenses || {};
                 }
 
-                initCharts(); // Initialize empty charts first
+                // Re-render everything with data
+                renderAllTables();
                 renderIncomeTable();
                 renderExpenseTable();
                 renderCashAccountsTable();
-                initCashMovement();
-                initExpensesMovement(); 
                 calculateDashboard();
-                updateAllCharts(); // Populate charts with data
-                resizeChartsForView('dashboard');
+                updateAllCharts();
+                
             } catch (error) {
                 console.error('Error loading data:', error);
             } finally {
@@ -1189,7 +1190,7 @@
             updateAllCharts();
         }
 
-        // --- INIT DASHBOARD ---
+        // --- INIT DASHBOARD (Render Only) ---
         function initDashboard() {
             const mainBody = document.querySelector('#table-main tbody');
             const busBody = document.querySelector('#table-business tbody');
@@ -1199,6 +1200,8 @@
             mainBody.innerHTML = '';
             busBody.innerHTML = '';
             
+            // Clean up headers carefully (Keep Month, insert cols, keep Total)
+            // Remove everything between Month (index 0) and Total (last index)
             while (headerRow.children.length > 2) { headerRow.removeChild(headerRow.children[1]); }
             while (footerRow.children.length > 2) { footerRow.removeChild(footerRow.children[1]); }
             
@@ -1359,536 +1362,6 @@
             });
         }
 
-        // --- INCOME TRACKER WITH PAGINATION ---
-        const serviceOptions = ["Social Media Management", "Virtual Assistance", "Paid Ads", "Branding", "Graphic Design"];
-        const pricingOptions = ["Monthly Retainer", "Project-Based"];
-        const statusOptions = ["Paid", "Pending", "Overdue"];
-
-        function renderIncomeTable() {
-            const tbody = document.getElementById('tracker-body');
-            tbody.innerHTML = '';
-            
-            // Filter first
-            const filtered = incomeRecords.filter(record => {
-                const recordYear = new Date(record.date).getFullYear();
-                return !record.date || recordYear === currentYear;
-            });
-
-            // Calculate pagination
-            const totalItems = filtered.length;
-            const totalPages = Math.ceil(totalItems / ROWS_PER_PAGE);
-            if (pgIncome > totalPages) pgIncome = totalPages || 1;
-            if (pgIncome < 1) pgIncome = 1;
-
-            // Slice data for current page
-            const start = (pgIncome - 1) * ROWS_PER_PAGE;
-            const end = start + ROWS_PER_PAGE;
-            const pageData = filtered.slice(start, end);
-
-            // Render Rows
-            pageData.forEach((record, index) => {
-                const tr = createIncomeRow(record, index);
-                tbody.appendChild(tr);
-            });
-
-            // Update UI Controls
-            document.getElementById('income-start').innerText = totalItems === 0 ? 0 : start + 1;
-            document.getElementById('income-end').innerText = Math.min(end, totalItems);
-            document.getElementById('income-total').innerText = totalItems;
-            document.getElementById('btn-prev-income').disabled = pgIncome <= 1;
-            document.getElementById('btn-next-income').disabled = pgIncome >= totalPages;
-
-            updateIncomeTracker();
-        }
-
-        function createIncomeRow(record, index) {
-            const tr = document.createElement('tr');
-            tr.className = "hover:bg-white/20 transition-colors";
-            tr.setAttribute('data-id', record.id);
-            const createSelect = (options, selected) => {
-                let html = `<select class="editable-input text-slate-700 font-medium" onchange="updateIncomeRecord(this)">`;
-                options.forEach(opt => html += `<option value="${opt}" ${opt === selected ? 'selected' : ''}>${opt}</option>`);
-                html += `</select>`;
-                return html;
-            };
-
-            tr.innerHTML = `
-                <td class="px-4 py-3 border-r border-slate-200/60"><input type="date" value="${record.date || ''}" class="editable-input text-slate-700 font-medium" onchange="updateIncomeRecord(this)"></td>
-                <td class="px-4 py-3 border-r border-slate-200/60 text-slate-700" contenteditable="true">${record.clientName || 'Client Name'}</td>
-                <td class="px-4 py-3 border-r border-slate-200/60">${createSelect(serviceOptions, record.serviceType)}</td>
-                <td class="px-4 py-3 border-r border-slate-200/60">${createSelect(pricingOptions, record.pricingModel)}</td>
-                <td class="px-4 py-3 text-right border-r border-slate-200/60 text-slate-700" contenteditable="true">${formatMoney(record.gross || 0)}</td>
-                <td class="px-4 py-3 text-right border-r border-slate-200/60 text-slate-700" contenteditable="true">${formatMoney(record.net || 0)}</td>
-                <td class="px-4 py-3 border-r border-slate-200/60 text-slate-700" contenteditable="true">${record.paymentMode || 'Bank Transfer'}</td>
-                <td class="px-4 py-3 border-r border-slate-200/60">${createSelect(statusOptions, record.status)}</td>
-                <td class="px-4 py-3 border-r border-slate-200/60 text-slate-700" contenteditable="true">${record.refId || 'INV-001'}</td>
-                <td class="px-4 py-3 text-slate-700" contenteditable="true">${record.notes || ''}</td>
-                <td class="px-2 py-3 text-center flex gap-1 justify-center no-print">
-                    <button onclick="openInvoice(this)" class="text-blue-400 hover:text-blue-600 transition-colors" title="Generate Invoice">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
-                    </button>
-                    <button onclick="deleteIncomeRow(this)" class="text-gray-400 hover:text-red-500 transition-colors" title="Delete">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
-                    </button>
-                </td>
-            `;
-            tr.querySelectorAll('[contenteditable="true"]').forEach(cell => {
-                cell.addEventListener('blur', function() { updateIncomeRecordFromRow(tr); });
-                cell.addEventListener('keydown', function(e) { if (e.key === 'Enter') { e.preventDefault(); this.blur(); } });
-            });
-            return tr;
-        }
-
-        function addIncomeRow() {
-            const newRecord = {
-                id: Date.now().toString(),
-                date: new Date().toISOString().split('T')[0],
-                clientName: 'Client Name',
-                serviceType: serviceOptions[0],
-                pricingModel: pricingOptions[0],
-                gross: 0, net: 0,
-                paymentMode: 'Bank Transfer',
-                status: statusOptions[0],
-                refId: `INV-${String(incomeRecords.length + 1).padStart(3, '0')}`,
-                notes: ''
-            };
-            incomeRecords.push(newRecord);
-            
-            // Jump to last page to see new entry
-            const filtered = incomeRecords.filter(record => {
-                const recordYear = new Date(record.date).getFullYear();
-                return !record.date || recordYear === currentYear;
-            });
-            pgIncome = Math.ceil(filtered.length / ROWS_PER_PAGE) || 1;
-            
-            renderIncomeTable();
-            scheduleSave(saveIncomeRecords);
-        }
-
-        function updateIncomeRecord(element) { updateIncomeRecordFromRow(element.closest('tr')); }
-        function updateIncomeRecordFromRow(tr) {
-            const id = tr.getAttribute('data-id');
-            const index = incomeRecords.findIndex(r => r.id === id);
-            if (index === -1) return;
-            const cells = tr.querySelectorAll('td');
-            incomeRecords[index] = {
-                ...incomeRecords[index],
-                date: cells[0].querySelector('input').value,
-                clientName: cells[1].innerText,
-                serviceType: cells[2].querySelector('select').value,
-                pricingModel: cells[3].querySelector('select').value,
-                gross: parseMoney(cells[4].innerText),
-                net: parseMoney(cells[5].innerText),
-                paymentMode: cells[6].innerText,
-                status: cells[7].querySelector('select').value,
-                refId: cells[8].innerText,
-                notes: cells[9].innerText
-            };
-            cells[4].innerText = formatMoney(incomeRecords[index].gross);
-            cells[5].innerText = formatMoney(incomeRecords[index].net);
-            updateIncomeTracker();
-            scheduleSave(saveIncomeRecords);
-        }
-
-        function deleteIncomeRow(btn) {
-            const tr = btn.closest('tr');
-            const id = tr.getAttribute('data-id');
-            incomeRecords = incomeRecords.filter(r => r.id !== id);
-            renderIncomeTable(); // Re-render to update pagination
-            scheduleSave(saveIncomeRecords);
-        }
-
-        function updateIncomeTracker() {
-            let totalGross = 0;
-            let totalNet = 0;
-            let serviceTotals = {};
-            serviceOptions.forEach(s => serviceTotals[s] = 0);
-            incomeRecords.forEach(record => {
-                const recordYear = new Date(record.date).getFullYear();
-                if (!record.date || recordYear === currentYear) {
-                    totalGross += record.gross || 0;
-                    totalNet += record.net || 0;
-                    if (serviceTotals[record.serviceType] !== undefined) serviceTotals[record.serviceType] += record.net || 0;
-                }
-            });
-            document.getElementById('tracker-total-gross').innerText = formatMoney(totalGross);
-            document.getElementById('tracker-total-net').innerText = formatMoney(totalNet);
-            updateAllCharts();
-        }
-
-        // --- EXPENSES TRACKER WITH PAGINATION ---
-        const expenseCategories = ["Payroll", "Software / Tools", "Advertising", "Payment Processing Fees", "Tax", "Education / Coaching", "Miscellaneous"];
-        const expenseTypes = ["Fixed", "Variable"];
-        const expensePayments = ["Card", "Bank", "Cash", "Transfer"];
-        const expenseStatuses = ["Paid", "Pending", "Overdue"];
-        const expenseRecurring = ["Yes", "No"];
-
-        function renderExpenseTable() {
-            const tbody = document.getElementById('expenses-body');
-            tbody.innerHTML = '';
-            
-            const filtered = expenseRecords.filter(record => {
-                const recordYear = new Date(record.date).getFullYear();
-                return !record.date || recordYear === currentYear;
-            });
-
-            // Pagination Logic
-            const totalItems = filtered.length;
-            const totalPages = Math.ceil(totalItems / ROWS_PER_PAGE);
-            if (pgExpense > totalPages) pgExpense = totalPages || 1;
-            if (pgExpense < 1) pgExpense = 1;
-
-            const start = (pgExpense - 1) * ROWS_PER_PAGE;
-            const end = start + ROWS_PER_PAGE;
-            const pageData = filtered.slice(start, end);
-
-            pageData.forEach((record, index) => {
-                const tr = createExpenseRow(record, index);
-                tbody.appendChild(tr);
-            });
-
-            // Update UI
-            document.getElementById('expense-start').innerText = totalItems === 0 ? 0 : start + 1;
-            document.getElementById('expense-end').innerText = Math.min(end, totalItems);
-            document.getElementById('expense-total').innerText = totalItems;
-            document.getElementById('btn-prev-expense').disabled = pgExpense <= 1;
-            document.getElementById('btn-next-expense').disabled = pgExpense >= totalPages;
-        }
-
-        function createExpenseRow(record, index) {
-            const tr = document.createElement('tr');
-            tr.className = "hover:bg-white/20 transition-colors";
-            tr.setAttribute('data-id', record.id);
-            const createSelect = (options, selected) => {
-                let html = `<select class="editable-input text-slate-700 font-medium" onchange="updateExpenseRecord(this)">`;
-                options.forEach(opt => html += `<option value="${opt}" ${opt === selected ? 'selected' : ''}>${opt}</option>`);
-                html += `</select>`;
-                return html;
-            };
-
-            tr.innerHTML = `
-                <td class="px-4 py-3 border-r border-slate-200/60"><input type="date" value="${record.date || ''}" class="editable-input text-slate-700 font-medium" onchange="updateExpenseRecord(this)"></td>
-                <td class="px-4 py-3 border-r border-slate-200/60 text-slate-700" contenteditable="true">${record.vendor || 'Vendor Name'}</td>
-                <td class="px-4 py-3 border-r border-slate-200/60">${createSelect(expenseCategories, record.category)}</td>
-                <td class="px-4 py-3 border-r border-slate-200/60">${createSelect(expenseTypes, record.type)}</td>
-                <td class="px-4 py-3 border-r border-slate-200/60 text-slate-700" contenteditable="true">${record.service || 'General'}</td>
-                <td class="px-4 py-3 text-right border-r border-slate-200/60 text-slate-700" contenteditable="true">${formatMoney(record.amount || 0)}</td>
-                <td class="px-4 py-3 border-r border-slate-200/60">${createSelect(expensePayments, record.payment)}</td>
-                <td class="px-4 py-3 border-r border-slate-200/60">${createSelect(expenseStatuses, record.status)}</td>
-                <td class="px-4 py-3 border-r border-slate-200/60">${createSelect(expenseRecurring, record.recurring)}</td>
-                <td class="px-4 py-3 text-slate-700" contenteditable="true">${record.notes || ''}</td>
-                <td class="px-2 py-3 text-center no-print">
-                    <button onclick="deleteExpenseRow(this)" class="text-gray-400 hover:text-red-500 transition-colors">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
-                    </button>
-                </td>
-            `;
-            tr.querySelectorAll('[contenteditable="true"]').forEach(cell => {
-                cell.addEventListener('blur', function() { updateExpenseRecordFromRow(tr); });
-                cell.addEventListener('keydown', function(e) { if (e.key === 'Enter') { e.preventDefault(); this.blur(); } });
-            });
-            return tr;
-        }
-
-        function addExpenseRow() {
-            const newRecord = {
-                id: Date.now().toString(),
-                date: new Date().toISOString().split('T')[0],
-                vendor: 'Vendor Name',
-                category: expenseCategories[0],
-                type: expenseTypes[0],
-                service: 'General',
-                amount: 0,
-                payment: expensePayments[0],
-                status: expenseStatuses[0],
-                recurring: expenseRecurring[1],
-                notes: ''
-            };
-            expenseRecords.push(newRecord);
-            
-            const filtered = expenseRecords.filter(record => {
-                const recordYear = new Date(record.date).getFullYear();
-                return !record.date || recordYear === currentYear;
-            });
-            pgExpense = Math.ceil(filtered.length / ROWS_PER_PAGE) || 1;
-
-            renderExpenseTable();
-            scheduleSave(saveExpenseRecords);
-        }
-
-        function updateExpenseRecord(element) { updateExpenseRecordFromRow(element.closest('tr')); }
-        function updateExpenseRecordFromRow(tr) {
-            const id = tr.getAttribute('data-id');
-            const index = expenseRecords.findIndex(r => r.id === id);
-            if (index === -1) return;
-            const cells = tr.querySelectorAll('td');
-            expenseRecords[index] = {
-                ...expenseRecords[index],
-                date: cells[0].querySelector('input').value,
-                vendor: cells[1].innerText,
-                category: cells[2].querySelector('select').value,
-                type: cells[3].querySelector('select').value,
-                service: cells[4].innerText,
-                amount: parseMoney(cells[5].innerText),
-                payment: cells[6].querySelector('select').value,
-                status: cells[7].querySelector('select').value,
-                recurring: cells[8].querySelector('select').value,
-                notes: cells[9].innerText
-            };
-            cells[5].innerText = formatMoney(expenseRecords[index].amount);
-            scheduleSave(saveExpenseRecords);
-        }
-
-        function deleteExpenseRow(btn) {
-            const tr = btn.closest('tr');
-            const id = tr.getAttribute('data-id');
-            expenseRecords = expenseRecords.filter(r => r.id !== id);
-            renderExpenseTable();
-            scheduleSave(saveExpenseRecords);
-        }
-
-        // --- NEW: INDEPENDENT EXPENSES MOVEMENT LOGIC ---
-        function initExpensesMovement() {
-            const tbody = document.getElementById('expenses-movement-body');
-            if (!tbody) return;
-
-            tbody.innerHTML = '';
-            MONTHS.forEach(month => {
-                const tr = document.createElement('tr');
-                tr.className = "hover:bg-white/20 transition-colors";
-                tr.setAttribute('data-month', month);
-                
-                // Note the 'exp_' prefix here to keep data separate
-                const startVal = cashMovement[`exp_${month}_start`] || 0;
-                const endVal = cashMovement[`exp_${month}_end`] || 0;
-                
-                tr.innerHTML = `
-                    <td class="px-6 py-4 font-bold text-slate-700 border-r border-slate-200/60">${month}</td>
-                    <td class="px-6 py-4 text-right border-r border-slate-200/60 exp-cash-start text-slate-600" contenteditable="true">${formatMoney(startVal)}</td>
-                    <td class="px-6 py-4 text-right border-r border-slate-200/60 exp-cash-end text-slate-600" contenteditable="true">${formatMoney(endVal)}</td>
-                    <td class="px-6 py-4 text-right exp-cash-net font-bold">-</td>
-                `;
-                tbody.appendChild(tr);
-            });
-
-            // Attach listeners specific to this table
-            tbody.querySelectorAll('.exp-cash-start, .exp-cash-end').forEach(cell => {
-                cell.addEventListener('blur', function() {
-                    const row = this.closest('tr');
-                    const month = row.getAttribute('data-month');
-                    const val = parseMoney(this.innerText);
-                    
-                    // Save to 'exp_' keys
-                    if (this.classList.contains('exp-cash-start')) { 
-                        cashMovement[`exp_${month}_start`] = val; 
-                    } else { 
-                        cashMovement[`exp_${month}_end`] = val; 
-                    }
-                    
-                    this.innerText = formatMoney(val);
-                    calculateExpensesMovement();
-                    scheduleSave(saveCashMovement); // Saves to the same DB location
-                });
-                
-                cell.addEventListener('keydown', function(e) { 
-                    if (e.key === 'Enter') { e.preventDefault(); this.blur(); } 
-                });
-            });
-
-            calculateExpensesMovement();
-        }
-
-        function calculateExpensesMovement() {
-            const rows = document.querySelectorAll('#expenses-movement-body tr');
-            rows.forEach(row => {
-                const startCell = row.querySelector('.exp-cash-start');
-                const endCell = row.querySelector('.exp-cash-end');
-                const netCell = row.querySelector('.exp-cash-net');
-                
-                const start = parseMoney(startCell.innerText);
-                const end = parseMoney(endCell.innerText);
-                
-                if(start !== 0 || end !== 0) {
-                    const net = end - start;
-                    const sign = net > 0 ? '+' : '';
-                    netCell.innerText = sign + formatMoney(net);
-                    
-                    if(net > 0) netCell.className = "px-6 py-4 text-right exp-cash-net font-bold text-green-600";
-                    else if(net < 0) netCell.className = "px-6 py-4 text-right exp-cash-net font-bold text-red-500";
-                    else netCell.className = "px-6 py-4 text-right exp-cash-net font-bold text-slate-500";
-                } else {
-                    netCell.innerText = '-';
-                    netCell.className = "px-6 py-4 text-right exp-cash-net font-bold text-gray-400";
-                }
-            });
-        }
-
-        // --- CASH OVERVIEW WITH PAGINATION ---
-        const cashAcctNames = ["Philippine Bank", "Business Savings", "Stripe Balance", "PayPal Balance", "Wise Balance"];
-        const cashAcctCategories = ["Operating Cash", "Payment Processors", "Savings / Reserves", "Tax Reserve", "Other"];
-
-        function renderCashAccountsTable() {
-            const tbody = document.getElementById('cash-balances-body');
-            tbody.innerHTML = '';
-            
-            // Pagination Logic for Cash Accounts
-            const totalItems = cashAccounts.length;
-            const totalPages = Math.ceil(totalItems / ROWS_PER_PAGE);
-            if (pgCash > totalPages) pgCash = totalPages || 1;
-            if (pgCash < 1) pgCash = 1;
-
-            const start = (pgCash - 1) * ROWS_PER_PAGE;
-            const end = start + ROWS_PER_PAGE;
-            const pageData = cashAccounts.slice(start, end);
-
-            pageData.forEach((record, index) => {
-                const tr = createCashAccountRow(record, index);
-                tbody.appendChild(tr);
-            });
-
-            // Update UI
-            document.getElementById('cash-start').innerText = totalItems === 0 ? 0 : start + 1;
-            document.getElementById('cash-end').innerText = Math.min(end, totalItems);
-            document.getElementById('cash-total').innerText = totalItems;
-            document.getElementById('btn-prev-cash').disabled = pgCash <= 1;
-            document.getElementById('btn-next-cash').disabled = pgCash >= totalPages;
-        }
-
-        function createCashAccountRow(record, index) {
-            const tr = document.createElement('tr');
-            tr.className = "hover:bg-white/20 transition-colors";
-            tr.setAttribute('data-id', record.id);
-            const createSelect = (options, selected) => {
-                let html = `<select class="editable-input text-slate-700 font-medium" onchange="updateCashAccount(this)">`;
-                options.forEach(opt => html += `<option value="${opt}" ${opt === selected ? 'selected' : ''}>${opt}</option>`);
-                html += `</select>`;
-                return html;
-            };
-            const createMonthSelect = (selected) => {
-                let html = `<select class="editable-input text-slate-700 font-medium" onchange="updateCashAccount(this)">`;
-                MONTHS.forEach(m => html += `<option value="${m}" ${m === selected ? 'selected' : ''}>${m}</option>`);
-                html += `</select>`;
-                return html;
-            };
-
-            tr.innerHTML = `
-                <td class="px-6 py-4 border-r border-slate-200/60">${createMonthSelect(record.month)}</td>
-                <td class="px-6 py-4 border-r border-slate-200/60">${createSelect(cashAcctNames, record.accountName)}</td>
-                <td class="px-6 py-4 border-r border-slate-200/60">${createSelect(cashAcctCategories, record.category)}</td>
-                <td class="px-6 py-4 border-r border-slate-200/60 text-slate-700" contenteditable="true">${record.institution || 'Bank Name'}</td>
-                <td class="px-6 py-4 text-right text-slate-700 font-medium" contenteditable="true">${formatMoney(record.balance || 0)}</td>
-                <td class="px-2 py-3 text-center no-print">
-                    <button onclick="deleteCashAccount(this)" class="text-gray-400 hover:text-red-500 transition-colors">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
-                    </button>
-                </td>
-            `;
-            tr.querySelectorAll('[contenteditable="true"]').forEach(cell => {
-                cell.addEventListener('blur', function() { updateCashAccountFromRow(tr); });
-                cell.addEventListener('keydown', function(e) { if (e.key === 'Enter') { e.preventDefault(); this.blur(); } });
-            });
-            return tr;
-        }
-
-        function addCashAccountRow() {
-            const newRecord = {
-                id: Date.now().toString(),
-                month: MONTHS[0],
-                accountName: cashAcctNames[0],
-                category: cashAcctCategories[0],
-                institution: 'Bank Name',
-                balance: 0
-            };
-            cashAccounts.push(newRecord);
-            
-            // Jump to last page
-            pgCash = Math.ceil(cashAccounts.length / ROWS_PER_PAGE) || 1;
-
-            renderCashAccountsTable();
-            scheduleSave(saveCashAccounts);
-        }
-
-        function updateCashAccount(element) { updateCashAccountFromRow(element.closest('tr')); }
-        function updateCashAccountFromRow(tr) {
-            const id = tr.getAttribute('data-id');
-            const index = cashAccounts.findIndex(r => r.id === id);
-            if (index === -1) return;
-            const cells = tr.querySelectorAll('td');
-            cashAccounts[index] = {
-                ...cashAccounts[index],
-                month: cells[0].querySelector('select').value,
-                accountName: cells[1].querySelector('select').value,
-                category: cells[2].querySelector('select').value,
-                institution: cells[3].innerText,
-                balance: parseMoney(cells[4].innerText)
-            };
-            cells[4].innerText = formatMoney(cashAccounts[index].balance);
-            scheduleSave(saveCashAccounts);
-        }
-
-        function deleteCashAccount(btn) {
-            const tr = btn.closest('tr');
-            const id = tr.getAttribute('data-id');
-            cashAccounts = cashAccounts.filter(r => r.id !== id);
-            renderCashAccountsTable();
-            scheduleSave(saveCashAccounts);
-        }
-
-        function initCashMovement() {
-            const tbody = document.getElementById('cash-movement-body');
-            tbody.innerHTML = '';
-            MONTHS.forEach(month => {
-                const tr = document.createElement('tr');
-                tr.className = "hover:bg-white/20 transition-colors";
-                tr.setAttribute('data-month', month);
-                const startVal = cashMovement[`${month}_start`] || 0;
-                const endVal = cashMovement[`${month}_end`] || 0;
-                tr.innerHTML = `
-                    <td class="px-6 py-4 font-bold text-slate-700 border-r border-slate-200/60">${month}</td>
-                    <td class="px-6 py-4 text-right border-r border-slate-200/60 cash-start text-slate-600" contenteditable="true">${formatMoney(startVal)}</td>
-                    <td class="px-6 py-4 text-right border-r border-slate-200/60 cash-end text-slate-600" contenteditable="true">${formatMoney(endVal)}</td>
-                    <td class="px-6 py-4 text-right cash-net font-bold">-</td>
-                `;
-                tbody.appendChild(tr);
-            });
-            document.querySelectorAll('.cash-start, .cash-end').forEach(cell => {
-                cell.addEventListener('blur', function() {
-                    const row = this.closest('tr');
-                    const month = row.getAttribute('data-month');
-                    const val = parseMoney(this.innerText);
-                    if (this.classList.contains('cash-start')) { cashMovement[`${month}_start`] = val; } 
-                    else { cashMovement[`${month}_end`] = val; }
-                    this.innerText = formatMoney(val);
-                    calculateCashMovement();
-                    scheduleSave(saveCashMovement);
-                });
-                cell.addEventListener('keydown', function(e) { if (e.key === 'Enter') { e.preventDefault(); this.blur(); } });
-            });
-            calculateCashMovement();
-        }
-
-        function calculateCashMovement() {
-            const rows = document.querySelectorAll('#cash-movement-body tr');
-            rows.forEach(row => {
-                const startCell = row.querySelector('.cash-start');
-                const endCell = row.querySelector('.cash-end');
-                const netCell = row.querySelector('.cash-net');
-                const start = parseMoney(startCell.innerText);
-                const end = parseMoney(endCell.innerText);
-                if(start !== 0 || end !== 0) {
-                    const net = end - start;
-                    const sign = net > 0 ? '+' : '';
-                    netCell.innerText = sign + formatMoney(net);
-                    if(net > 0) netCell.className = "px-6 py-4 text-right cash-net font-bold text-green-600";
-                    else if(net < 0) netCell.className = "px-6 py-4 text-right cash-net font-bold text-red-500";
-                    else netCell.className = "px-6 py-4 text-right cash-net font-bold text-slate-500";
-                } else {
-                    netCell.innerText = '-';
-                    netCell.className = "px-6 py-4 text-right cash-net font-bold text-gray-400";
-                }
-            });
-        }
-
         // --- MODERN CHARTS CONFIG & INIT ---
 
         // Helper: Create Gradient
@@ -1923,76 +1396,94 @@
                 plugins: { tooltip: glassTooltip, legend: { display: false } }
             };
 
-            // --- DASHBOARD CHARTS ---
-            const ctxRevBar = document.getElementById('revenueBarChart').getContext('2d');
-            window.revenueBarChart = new Chart(ctxRevBar, {
-                type: 'bar',
-                data: { labels: [], datasets: [{ label: 'Net Revenue', data: [], borderRadius: 6 }] },
-                options: { ...commonOptions, scales: { x: { grid: { display: false } }, y: { beginAtZero: true, grid: { borderDash: [4, 4] } } } }
-            });
+            // Safeguard function to get context
+            const getCtx = (id) => {
+                const el = document.getElementById(id);
+                return el ? el.getContext('2d') : null;
+            }
 
-            const ctxRevPie = document.getElementById('revenuePieChart').getContext('2d');
-            window.revenuePieChart = new Chart(ctxRevPie, {
-                type: 'doughnut',
-                data: { labels: [], datasets: [{ data: [], borderWidth: 3, borderColor: '#ffffff' }] },
-                options: { ...commonOptions, cutout: '70%', plugins: { ...commonOptions.plugins, legend: { position: 'bottom', labels: { boxWidth: 10, usePointStyle: true } } } }
-            });
+            // --- DASHBOARD CHARTS ---
+            const ctxRevBar = getCtx('revenueBarChart');
+            if(ctxRevBar) {
+                window.revenueBarChart = new Chart(ctxRevBar, {
+                    type: 'bar',
+                    data: { labels: [], datasets: [{ label: 'Net Revenue', data: [], borderRadius: 6 }] },
+                    options: { ...commonOptions, scales: { x: { grid: { display: false } }, y: { beginAtZero: true, grid: { borderDash: [4, 4] } } } }
+                });
+            }
+
+            const ctxRevPie = getCtx('revenuePieChart');
+            if(ctxRevPie) {
+                window.revenuePieChart = new Chart(ctxRevPie, {
+                    type: 'doughnut',
+                    data: { labels: [], datasets: [{ data: [], borderWidth: 3, borderColor: '#ffffff' }] },
+                    options: { ...commonOptions, cutout: '70%', plugins: { ...commonOptions.plugins, legend: { position: 'bottom', labels: { boxWidth: 10, usePointStyle: true } } } }
+                });
+            }
 
             // --- INCOME CHARTS ---
-            const ctxTrackChart = document.getElementById('trackerServiceChart').getContext('2d');
-            window.trackerChart = new Chart(ctxTrackChart, {
-                type: 'doughnut',
-                data: { labels: [], datasets: [{ data: [], borderWidth: 0 }] },
-                options: { ...commonOptions, cutout: '75%', plugins: { ...commonOptions.plugins, legend: { position: 'right', labels: { boxWidth: 8, usePointStyle: true } } } }
-            });
+            const ctxTrackChart = getCtx('trackerServiceChart');
+            if(ctxTrackChart) {
+                window.trackerChart = new Chart(ctxTrackChart, {
+                    type: 'doughnut',
+                    data: { labels: [], datasets: [{ data: [], borderWidth: 0 }] },
+                    options: { ...commonOptions, cutout: '75%', plugins: { ...commonOptions.plugins, legend: { position: 'right', labels: { boxWidth: 8, usePointStyle: true } } } }
+                });
+            }
 
-            const ctxTrackBar = document.getElementById('trackerBarChart').getContext('2d');
-            window.trackerBarChart = new Chart(ctxTrackBar, {
-                type: 'bar',
-                data: { labels: [], datasets: [{ label: 'Income', data: [], backgroundColor: '#34b0e5', borderRadius: 4, barPercentage: 0.5 }] },
-                options: { ...commonOptions, indexAxis: 'y', scales: { x: { display: false }, y: { grid: { display: false } } } }
-            });
+            const ctxTrackBar = getCtx('trackerBarChart');
+            if(ctxTrackBar) {
+                window.trackerBarChart = new Chart(ctxTrackBar, {
+                    type: 'bar',
+                    data: { labels: [], datasets: [{ label: 'Income', data: [], backgroundColor: '#34b0e5', borderRadius: 4, barPercentage: 0.5 }] },
+                    options: { ...commonOptions, indexAxis: 'y', scales: { x: { display: false }, y: { grid: { display: false } } } }
+                });
+            }
 
             // --- NEW: EXPENSE CHARTS ---
-            // 1. Trend Line (Burn Rate)
-            const ctxExpTrend = document.getElementById('expensesTrendChart').getContext('2d');
-            window.expensesTrendChart = new Chart(ctxExpTrend, {
-                type: 'line',
-                data: { labels: [], datasets: [{ label: 'Expenses', data: [], fill: true, tension: 0.4, pointRadius: 4, pointHoverRadius: 6 }] },
-                options: { 
-                    ...commonOptions,
-                    scales: { x: { grid: { display: false } }, y: { beginAtZero: true, grid: { borderDash: [4, 4] } } }
-                }
-            });
+            const ctxExpTrend = getCtx('expensesTrendChart');
+            if(ctxExpTrend) {
+                window.expensesTrendChart = new Chart(ctxExpTrend, {
+                    type: 'line',
+                    data: { labels: [], datasets: [{ label: 'Expenses', data: [], fill: true, tension: 0.4, pointRadius: 4, pointHoverRadius: 6 }] },
+                    options: { 
+                        ...commonOptions,
+                        scales: { x: { grid: { display: false } }, y: { beginAtZero: true, grid: { borderDash: [4, 4] } } }
+                    }
+                });
+            }
 
-            // 2. Category Doughnut
-            const ctxExpCat = document.getElementById('expensesCatChart').getContext('2d');
-            window.expensesCatChart = new Chart(ctxExpCat, {
-                type: 'doughnut',
-                data: { labels: [], datasets: [{ data: [], borderWidth: 3, borderColor: '#ffffff' }] },
-                options: { ...commonOptions, cutout: '65%', plugins: { ...commonOptions.plugins, legend: { position: 'right', labels: { boxWidth: 8, usePointStyle: true } } } }
-            });
+            const ctxExpCat = getCtx('expensesCatChart');
+            if(ctxExpCat) {
+                window.expensesCatChart = new Chart(ctxExpCat, {
+                    type: 'doughnut',
+                    data: { labels: [], datasets: [{ data: [], borderWidth: 3, borderColor: '#ffffff' }] },
+                    options: { ...commonOptions, cutout: '65%', plugins: { ...commonOptions.plugins, legend: { position: 'right', labels: { boxWidth: 8, usePointStyle: true } } } }
+                });
+            }
 
             // --- NEW: CASH CHARTS ---
-            // 1. Polar Area (Liquidity)
-            const ctxCashPolar = document.getElementById('cashPolarChart').getContext('2d');
-            window.cashPolarChart = new Chart(ctxCashPolar, {
-                type: 'polarArea',
-                data: { labels: [], datasets: [{ data: [], borderWidth: 2, borderColor: '#ffffff' }] },
-                options: { 
-                    ...commonOptions, 
-                    scales: { r: { ticks: { display: false }, grid: { color: 'rgba(0,0,0,0.05)' } } },
-                    plugins: { ...commonOptions.plugins, legend: { position: 'right', labels: { boxWidth: 10, usePointStyle: true } } } 
-                }
-            });
+            const ctxCashPolar = getCtx('cashPolarChart');
+            if(ctxCashPolar) {
+                window.cashPolarChart = new Chart(ctxCashPolar, {
+                    type: 'polarArea',
+                    data: { labels: [], datasets: [{ data: [], borderWidth: 2, borderColor: '#ffffff' }] },
+                    options: { 
+                        ...commonOptions, 
+                        scales: { r: { ticks: { display: false }, grid: { color: 'rgba(0,0,0,0.05)' } } },
+                        plugins: { ...commonOptions.plugins, legend: { position: 'right', labels: { boxWidth: 10, usePointStyle: true } } } 
+                    }
+                });
+            }
 
-            // 2. Net Flow (Pos/Neg Bars)
-            const ctxCashFlow = document.getElementById('cashFlowChart').getContext('2d');
-            window.cashFlowChart = new Chart(ctxCashFlow, {
-                type: 'bar',
-                data: { labels: [], datasets: [{ label: 'Net Change', data: [], borderRadius: 4 }] },
-                options: { ...commonOptions, scales: { x: { grid: { display: false } }, y: { grid: { borderDash: [4, 4] } } } }
-            });
+            const ctxCashFlow = getCtx('cashFlowChart');
+            if(ctxCashFlow) {
+                window.cashFlowChart = new Chart(ctxCashFlow, {
+                    type: 'bar',
+                    data: { labels: [], datasets: [{ label: 'Net Change', data: [], borderRadius: 4 }] },
+                    options: { ...commonOptions, scales: { x: { grid: { display: false } }, y: { grid: { borderDash: [4, 4] } } } }
+                });
+            }
         }
 
         // 2. Calculate Data and Update Charts
@@ -2121,22 +1612,21 @@
             }
         }
 
-        // --- PAGINATION HANDLER ---
-        function changePage(type, direction) {
-            if (type === 'income') {
-                pgIncome += direction;
-                renderIncomeTable();
-            } else if (type === 'expense') {
-                pgExpense += direction;
-                renderExpenseTable();
-            } else if (type === 'cash') {
-                pgCash += direction;
-                renderCashAccountsTable();
-            }
+        // --- RENDER ALL TABLES IMMEDIATELY ---
+        function renderAllTables() {
+            initDashboard();
+            initExpensesMovement();
+            initCashMovement();
         }
 
         window.onload = function() {
+            // 1. Force Render Skeletons (Fixes "Missing Rows")
+            renderAllTables();
+            
+            // 2. Initialize Charts (Safe Mode)
             initCharts();
+            
+            // 3. Fetch Data (Then re-renders)
             loadAllData();
             fetchLiveExchangeRate();
 
