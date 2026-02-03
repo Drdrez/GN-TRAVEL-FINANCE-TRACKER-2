@@ -103,4 +103,5 @@ CREATE POLICY "Allow all cash_accounts" ON cash_accounts FOR ALL USING (true) WI
 CREATE POLICY "Allow all cash_movement" ON cash_movement FOR ALL USING (true) WITH CHECK (true);
 CREATE POLICY "Allow all business_config" ON business_config FOR ALL USING (true) WITH CHECK (true);
 CREATE POLICY "Allow all payroll" ON payroll_records FOR ALL USING (true) WITH CHECK (true);
-}
+
+
