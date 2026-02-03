@@ -63,7 +63,7 @@
         /* Table Styles */
         th, td { white-space: nowrap; }
         
-        /* --- EDITABLE INPUTS & DROPDOWNS (OPTIMIZED) --- */
+        /* --- EDITABLE INPUTS & DROPDOWNS --- */
         td[contenteditable="true"], th[contenteditable="true"], select.editable-input, input.editable-input {
             background-color: transparent;
             cursor: text;
@@ -462,6 +462,24 @@
         </section>
 
         <section id="view-expenses" class="hidden pb-8">
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+                <div class="lg:col-span-2 glass p-6 rounded-2xl shadow-sm">
+                    <h3 class="text-sm font-bold text-slate-500 uppercase tracking-wider mb-4">Monthly Burn Rate</h3>
+                    <div class="relative h-64 w-full">
+                        <canvas id="expensesTrendChart"></canvas>
+                    </div>
+                </div>
+                
+                <div class="glass p-6 rounded-2xl shadow-sm flex flex-col items-center">
+                    <div class="w-full mb-2">
+                        <h3 class="text-sm font-bold text-slate-500 uppercase tracking-wider">Top Categories</h3>
+                    </div>
+                    <div class="relative h-56 w-full flex justify-center">
+                        <canvas id="expensesCatChart"></canvas>
+                    </div>
+                </div>
+            </div>
+
             <div class="glass rounded-2xl shadow-sm mb-8 overflow-hidden flex-1 flex flex-col">
                 <div class="p-6 border-b border-slate-200/60 flex justify-between items-center">
                     <h3 class="text-lg font-bold text-[#34b0e5]">Expenses Details</h3>
@@ -529,6 +547,24 @@
             </section>
 
         <section id="view-cash" class="hidden pb-8">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+                <div class="glass p-6 rounded-2xl shadow-sm flex flex-col items-center">
+                    <div class="w-full mb-2">
+                        <h3 class="text-sm font-bold text-slate-500 uppercase tracking-wider">Liquidity Distribution</h3>
+                    </div>
+                    <div class="relative h-64 w-full flex justify-center">
+                        <canvas id="cashPolarChart"></canvas>
+                    </div>
+                </div>
+
+                <div class="glass p-6 rounded-2xl shadow-sm">
+                    <h3 class="text-sm font-bold text-slate-500 uppercase tracking-wider mb-4">Net Cash Movement</h3>
+                    <div class="relative h-64 w-full">
+                        <canvas id="cashFlowChart"></canvas>
+                    </div>
+                </div>
+            </div>
+
             <div class="glass rounded-2xl shadow-sm mb-8 overflow-hidden">
                 <div class="p-6 border-b border-slate-200/60 flex justify-between items-center">
                     <h3 class="text-lg font-bold text-[#34b0e5]">Cash Account Balances</h3>
@@ -803,6 +839,7 @@
                     const usdBtn = document.getElementById('btn-usd');
                     if (usdBtn) usdBtn.setAttribute('title', `Current Rate: ₱${exchangeRate.toFixed(2)} = $1 USD`);
                     if (currentCurrency === 'USD') {
+                        updateAllCharts();
                         calculateDashboard();
                         updateIncomeTracker();
                         renderIncomeTable();
@@ -861,6 +898,7 @@
             });
 
             // Re-render
+            updateAllCharts();
             calculateDashboard();
             updateIncomeTracker();
             renderIncomeTable();
@@ -872,7 +910,7 @@
         function changeYear(year) {
             currentYear = parseInt(year);
             document.getElementById('year-selector').value = year;
-            initDashboard(); 
+            initCharts(); 
             // Reset pagination on filter change
             pgIncome = 1;
             pgExpense = 1;
@@ -880,6 +918,7 @@
             renderExpenseTable();
             updateIncomeTracker();
             calculateDashboard(); 
+            updateAllCharts();
         }
 
         function scheduleSave(saveFunction) {
@@ -887,7 +926,7 @@
             saveTimeout = setTimeout(saveFunction, SAVE_DELAY);
         }
 
-        // --- NEW: EXPORT CSV FUNCTION (BY TYPE) ---
+        // --- EXPORT CSV FUNCTION (BY TYPE) ---
         function exportToCSV(type) {
             let csvContent = "data:text/csv;charset=utf-8,";
             let filename = "Export.csv";
@@ -969,13 +1008,14 @@
                     dashboardExpenses = businessDataResult.dashboardExpenses || {};
                 }
 
-                initDashboard();
+                initCharts(); // Initialize empty charts first
                 renderIncomeTable();
                 renderExpenseTable();
                 renderCashAccountsTable();
                 initCashMovement();
                 initExpensesMovement(); 
                 calculateDashboard();
+                updateAllCharts(); // Populate charts with data
                 resizeChartsForView('dashboard');
             } catch (error) {
                 console.error('Error loading data:', error);
@@ -984,12 +1024,13 @@
             }
         }
 
-        async function saveIncomeRecords() { await apiPut('income', incomeRecords); }
-        async function saveExpenseRecords() { await apiPut('expenses', expenseRecords); }
-        async function saveCashAccounts() { await apiPut('cash?type=accounts', cashAccounts); }
-        async function saveCashMovement() { await apiPost('cash?type=movement', cashMovement); }
+        async function saveIncomeRecords() { await apiPut('income', incomeRecords); updateAllCharts(); }
+        async function saveExpenseRecords() { await apiPut('expenses', expenseRecords); updateAllCharts(); }
+        async function saveCashAccounts() { await apiPut('cash?type=accounts', cashAccounts); updateAllCharts(); }
+        async function saveCashMovement() { await apiPost('cash?type=movement', cashMovement); updateAllCharts(); }
         async function saveBusinessData() {
             await apiPost('business', { columns: businessColumns, businessData: businessData, dashboardExpenses: dashboardExpenses });
+            updateAllCharts();
         }
 
         // --- INVOICE GENERATOR ---
@@ -1029,6 +1070,14 @@
                     if (window.trackerChart) window.trackerChart.resize();
                     if (window.trackerBarChart) window.trackerBarChart.resize();
                 }
+                if (viewId === 'expenses') {
+                    if (window.expensesTrendChart) window.expensesTrendChart.resize();
+                    if (window.expensesCatChart) window.expensesCatChart.resize();
+                }
+                if (viewId === 'cash') {
+                    if (window.cashPolarChart) window.cashPolarChart.resize();
+                    if (window.cashFlowChart) window.cashFlowChart.resize();
+                }
             });
         }
 
@@ -1053,6 +1102,7 @@
             if(viewId === 'cash') calculateCashMovement();
             if(viewId === 'expenses') calculateExpensesMovement();
 
+            updateAllCharts();
             closeSidebar();
             resizeChartsForView(viewId);
         }
@@ -1136,18 +1186,7 @@
             document.getElementById('kpi-net-income').innerText = formatMoney(totalNet);
             document.getElementById('kpi-margin').innerText = totalMargin.toFixed(1) + '%';
             
-            if(window.revenueBarChart) {
-                window.revenueBarChart.data.labels = colNames;
-                window.revenueBarChart.data.datasets[0].data = colSums;
-                window.revenueBarChart.update();
-            }
-            if(window.revenuePieChart) {
-                window.revenuePieChart.data.labels = colNames;
-                window.revenuePieChart.data.datasets[0].data = colSums;
-                const baseColors = ['#34b0e5', '#84d0f0', '#1e6b8c', '#a0e0f8', '#0f4b63', '#62c4ea', '#103a4a'];
-                window.revenuePieChart.data.datasets[0].backgroundColor = colNames.map((_, i) => baseColors[i % baseColors.length]);
-                window.revenuePieChart.update();
-            }
+            updateAllCharts();
         }
 
         // --- INIT DASHBOARD ---
@@ -1474,16 +1513,7 @@
             });
             document.getElementById('tracker-total-gross').innerText = formatMoney(totalGross);
             document.getElementById('tracker-total-net').innerText = formatMoney(totalNet);
-            if(window.trackerChart) {
-                const labels = Object.keys(serviceTotals).filter(k => serviceTotals[k] > 0);
-                const data = labels.map(k => serviceTotals[k]);
-                window.trackerChart.data.labels = labels;
-                window.trackerChart.data.datasets[0].data = data;
-                window.trackerChart.update();
-                window.trackerBarChart.data.labels = labels;
-                window.trackerBarChart.data.datasets[0].data = data;
-                window.trackerBarChart.update();
-            }
+            updateAllCharts();
         }
 
         // --- EXPENSES TRACKER WITH PAGINATION ---
@@ -1859,35 +1889,236 @@
             });
         }
 
-        // --- CHARTS INIT ---
+        // --- MODERN CHARTS CONFIG & INIT ---
+
+        // Helper: Create Gradient
+        function createGradient(ctx, area, colorStart, colorEnd) {
+            const gradient = ctx.createLinearGradient(0, area.bottom, 0, area.top);
+            gradient.addColorStop(0, colorStart);
+            gradient.addColorStop(1, colorEnd);
+            return gradient;
+        }
+
+        // 1. Initialize Empty Charts with Modern Config
         function initCharts() {
-            const ctxTracker = document.getElementById('trackerServiceChart').getContext('2d');
-            window.trackerChart = new Chart(ctxTracker, {
-                type: 'pie',
-                data: { labels: [], datasets: [{ data: [], backgroundColor: ['#34b0e5', '#84d0f0', '#1e6b8c', '#a0e0f8', '#0f4b63'], borderWidth: 2, borderColor: '#ffffff' }] },
-                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'right', labels: { boxWidth: 10 } } } }
-            });
+            Chart.defaults.font.family = "'Segoe UI', 'Helvetica', 'Arial', sans-serif";
+            Chart.defaults.font.size = 11;
+            Chart.defaults.color = '#64748b';
             
-            const ctxTrackerBar = document.getElementById('trackerBarChart').getContext('2d');
-            window.trackerBarChart = new Chart(ctxTrackerBar, {
+            const glassTooltip = {
+                backgroundColor: 'rgba(255, 255, 255, 0.95)',
+                titleColor: '#0f172a',
+                bodyColor: '#334155',
+                borderColor: 'rgba(255, 255, 255, 0.6)',
+                borderWidth: 1,
+                padding: 10,
+                boxPadding: 4,
+                usePointStyle: true,
+                callbacks: { labelTextColor: () => '#334155' }
+            };
+
+            const commonOptions = {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { tooltip: glassTooltip, legend: { display: false } }
+            };
+
+            // --- DASHBOARD CHARTS ---
+            const ctxRevBar = document.getElementById('revenueBarChart').getContext('2d');
+            window.revenueBarChart = new Chart(ctxRevBar, {
                 type: 'bar',
-                data: { labels: [], datasets: [{ label: 'Total Net Income', data: [], backgroundColor: '#34b0e5', borderRadius: 4 }] },
-                options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false, scales: { x: { beginAtZero: true } }, plugins: { legend: { display: false } } }
-            });
-            
-            const ctxBar = document.getElementById('revenueBarChart').getContext('2d');
-            window.revenueBarChart = new Chart(ctxBar, {
-                type: 'bar',
-                data: { labels: [], datasets: [{ label: 'Net Revenue', data: [], backgroundColor: '#34b0e5', borderRadius: 4 }] },
-                options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true }, x: { grid: { display: false } } }, plugins: { legend: { display: false } } }
+                data: { labels: [], datasets: [{ label: 'Net Revenue', data: [], borderRadius: 6 }] },
+                options: { ...commonOptions, scales: { x: { grid: { display: false } }, y: { beginAtZero: true, grid: { borderDash: [4, 4] } } } }
             });
 
-            const ctxPie = document.getElementById('revenuePieChart').getContext('2d');
-            window.revenuePieChart = new Chart(ctxPie, {
+            const ctxRevPie = document.getElementById('revenuePieChart').getContext('2d');
+            window.revenuePieChart = new Chart(ctxRevPie, {
                 type: 'doughnut',
-                data: { labels: [], datasets: [{ data: [], backgroundColor: ['#34b0e5', '#84d0f0'], borderWidth: 2, borderColor: '#ffffff' }] },
-                options: { responsive: true, maintainAspectRatio: false, cutout: '65%', plugins: { legend: { position: 'bottom', labels: { boxWidth: 12, padding: 10 } } } }
+                data: { labels: [], datasets: [{ data: [], borderWidth: 3, borderColor: '#ffffff' }] },
+                options: { ...commonOptions, cutout: '70%', plugins: { ...commonOptions.plugins, legend: { position: 'bottom', labels: { boxWidth: 10, usePointStyle: true } } } }
             });
+
+            // --- INCOME CHARTS ---
+            const ctxTrackChart = document.getElementById('trackerServiceChart').getContext('2d');
+            window.trackerChart = new Chart(ctxTrackChart, {
+                type: 'doughnut',
+                data: { labels: [], datasets: [{ data: [], borderWidth: 0 }] },
+                options: { ...commonOptions, cutout: '75%', plugins: { ...commonOptions.plugins, legend: { position: 'right', labels: { boxWidth: 8, usePointStyle: true } } } }
+            });
+
+            const ctxTrackBar = document.getElementById('trackerBarChart').getContext('2d');
+            window.trackerBarChart = new Chart(ctxTrackBar, {
+                type: 'bar',
+                data: { labels: [], datasets: [{ label: 'Income', data: [], backgroundColor: '#34b0e5', borderRadius: 4, barPercentage: 0.5 }] },
+                options: { ...commonOptions, indexAxis: 'y', scales: { x: { display: false }, y: { grid: { display: false } } } }
+            });
+
+            // --- NEW: EXPENSE CHARTS ---
+            // 1. Trend Line (Burn Rate)
+            const ctxExpTrend = document.getElementById('expensesTrendChart').getContext('2d');
+            window.expensesTrendChart = new Chart(ctxExpTrend, {
+                type: 'line',
+                data: { labels: [], datasets: [{ label: 'Expenses', data: [], fill: true, tension: 0.4, pointRadius: 4, pointHoverRadius: 6 }] },
+                options: { 
+                    ...commonOptions,
+                    scales: { x: { grid: { display: false } }, y: { beginAtZero: true, grid: { borderDash: [4, 4] } } }
+                }
+            });
+
+            // 2. Category Doughnut
+            const ctxExpCat = document.getElementById('expensesCatChart').getContext('2d');
+            window.expensesCatChart = new Chart(ctxExpCat, {
+                type: 'doughnut',
+                data: { labels: [], datasets: [{ data: [], borderWidth: 3, borderColor: '#ffffff' }] },
+                options: { ...commonOptions, cutout: '65%', plugins: { ...commonOptions.plugins, legend: { position: 'right', labels: { boxWidth: 8, usePointStyle: true } } } }
+            });
+
+            // --- NEW: CASH CHARTS ---
+            // 1. Polar Area (Liquidity)
+            const ctxCashPolar = document.getElementById('cashPolarChart').getContext('2d');
+            window.cashPolarChart = new Chart(ctxCashPolar, {
+                type: 'polarArea',
+                data: { labels: [], datasets: [{ data: [], borderWidth: 2, borderColor: '#ffffff' }] },
+                options: { 
+                    ...commonOptions, 
+                    scales: { r: { ticks: { display: false }, grid: { color: 'rgba(0,0,0,0.05)' } } },
+                    plugins: { ...commonOptions.plugins, legend: { position: 'right', labels: { boxWidth: 10, usePointStyle: true } } } 
+                }
+            });
+
+            // 2. Net Flow (Pos/Neg Bars)
+            const ctxCashFlow = document.getElementById('cashFlowChart').getContext('2d');
+            window.cashFlowChart = new Chart(ctxCashFlow, {
+                type: 'bar',
+                data: { labels: [], datasets: [{ label: 'Net Change', data: [], borderRadius: 4 }] },
+                options: { ...commonOptions, scales: { x: { grid: { display: false } }, y: { grid: { borderDash: [4, 4] } } } }
+            });
+        }
+
+        // 2. Calculate Data and Update Charts
+        function updateAllCharts() {
+            // A. PREPARE COLORS
+            const blueGradient = (ctx, area) => createGradient(ctx, area, 'rgba(52, 176, 229, 0.4)', '#34b0e5');
+            const redGradient = (ctx, area) => createGradient(ctx, area, 'rgba(239, 68, 68, 0.4)', '#ef4444');
+            const palette = ['#34b0e5', '#60a5fa', '#818cf8', '#a78bfa', '#c084fc', '#f472b6'];
+
+            // --- 1. DASHBOARD DATA ---
+            const dashLabels = businessColumns;
+            const dashData = new Array(businessColumns.length).fill(0);
+            
+            // Aggregate annual business data
+            MONTHS.forEach(m => {
+                businessColumns.forEach((col, idx) => {
+                    dashData[idx] += (businessData[currentYear + '_' + col + '_' + m] || 0);
+                });
+            });
+            
+            if(window.revenueBarChart) {
+                window.revenueBarChart.data.labels = dashLabels;
+                window.revenueBarChart.data.datasets[0].data = dashData;
+                window.revenueBarChart.data.datasets[0].backgroundColor = (ctx) => {
+                    const chart = ctx.chart;
+                    const { ctx: c, chartArea } = chart;
+                    if (!chartArea) return null;
+                    return createGradient(c, chartArea, 'rgba(52, 176, 229, 0.2)', '#34b0e5');
+                };
+                window.revenueBarChart.update();
+            }
+            if(window.revenuePieChart) {
+                window.revenuePieChart.data.labels = dashLabels;
+                window.revenuePieChart.data.datasets[0].data = dashData;
+                window.revenuePieChart.data.datasets[0].backgroundColor = palette;
+                window.revenuePieChart.update();
+            }
+
+            // --- 2. INCOME DATA ---
+            let serviceTotals = {};
+            incomeRecords.forEach(r => {
+                const y = new Date(r.date).getFullYear();
+                if((!r.date || y === currentYear) && r.serviceType) {
+                    serviceTotals[r.serviceType] = (serviceTotals[r.serviceType] || 0) + (r.net || 0);
+                }
+            });
+            const incLabels = Object.keys(serviceTotals);
+            const incData = Object.values(serviceTotals);
+
+            if(window.trackerChart) {
+                window.trackerChart.data.labels = incLabels;
+                window.trackerChart.data.datasets[0].data = incData;
+                window.trackerChart.data.datasets[0].backgroundColor = palette;
+                window.trackerChart.update();
+            }
+            if(window.trackerBarChart) {
+                window.trackerBarChart.data.labels = incLabels;
+                window.trackerBarChart.data.datasets[0].data = incData;
+                window.trackerBarChart.update();
+            }
+
+            // --- 3. EXPENSE DATA (NEW) ---
+            // A. Trend (Monthly)
+            let monthlyExp = new Array(12).fill(0);
+            // B. Category
+            let catExp = {};
+            
+            expenseRecords.forEach(r => {
+                const d = new Date(r.date);
+                if(d.getFullYear() === currentYear) {
+                    monthlyExp[d.getMonth()] += (r.amount || 0);
+                    catExp[r.category] = (catExp[r.category] || 0) + (r.amount || 0);
+                }
+            });
+
+            if(window.expensesTrendChart) {
+                window.expensesTrendChart.data.labels = MONTHS;
+                window.expensesTrendChart.data.datasets[0].data = monthlyExp;
+                window.expensesTrendChart.data.datasets[0].borderColor = '#ef4444'; // Red line
+                window.expensesTrendChart.data.datasets[0].backgroundColor = (ctx) => {
+                    const chart = ctx.chart;
+                    const { ctx: c, chartArea } = chart;
+                    if (!chartArea) return null;
+                    return createGradient(c, chartArea, 'rgba(239, 68, 68, 0.05)', 'rgba(239, 68, 68, 0.4)');
+                };
+                window.expensesTrendChart.update();
+            }
+
+            if(window.expensesCatChart) {
+                // Sort top 5 categories
+                const sortedCats = Object.entries(catExp).sort((a,b) => b[1] - a[1]).slice(0, 5);
+                window.expensesCatChart.data.labels = sortedCats.map(x => x[0]);
+                window.expensesCatChart.data.datasets[0].data = sortedCats.map(x => x[1]);
+                window.expensesCatChart.data.datasets[0].backgroundColor = ['#ef4444', '#f87171', '#fca5a5', '#fecaca', '#fee2e2'];
+                window.expensesCatChart.update();
+            }
+
+            // --- 4. CASH DATA (NEW) ---
+            // A. Liquidity (By Account Name, filter latest)
+            let latestBalances = {};
+            cashAccounts.forEach(r => {
+                // Overwrite to get latest status (naive approach, relies on input order/latest edits)
+                latestBalances[r.accountName] = r.balance;
+            });
+
+            if(window.cashPolarChart) {
+                window.cashPolarChart.data.labels = Object.keys(latestBalances);
+                window.cashPolarChart.data.datasets[0].data = Object.values(latestBalances);
+                window.cashPolarChart.data.datasets[0].backgroundColor = palette.map(c => c + 'AA'); // Transparent hex
+                window.cashPolarChart.update();
+            }
+
+            // B. Net Flow
+            let netFlow = new Array(12).fill(0);
+            MONTHS.forEach((m, idx) => {
+                const start = cashMovement[`${m}_start`] || 0;
+                const end = cashMovement[`${m}_end`] || 0;
+                netFlow[idx] = end - start;
+            });
+
+            if(window.cashFlowChart) {
+                window.cashFlowChart.data.labels = MONTHS;
+                window.cashFlowChart.data.datasets[0].data = netFlow;
+                window.cashFlowChart.data.datasets[0].backgroundColor = netFlow.map(val => val >= 0 ? '#10b981' : '#ef4444'); // Green if pos, Red if neg
+                window.cashFlowChart.update();
+            }
         }
 
         // --- PAGINATION HANDLER ---
