@@ -139,7 +139,7 @@
         .save-indicator.show { display: flex; align-items: center; gap: 8px; }
         .save-indicator.error { background: #ef4444; }
 
-        /* --- PAYROLL SPECIFIC STYLES (THEME COMPLIANT) --- */
+        /* --- PAYROLL SPECIFIC STYLES --- */
         .payroll-label {
             font-size: 0.75rem;
             text-transform: uppercase;
@@ -164,15 +164,7 @@
             outline: none;
             box-shadow: 0 0 0 3px rgba(52, 176, 229, 0.1);
         }
-        .payroll-row {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 0.75rem 0;
-            border-bottom: 1px dashed #e2e8f0;
-        }
-        .payroll-row:last-child { border-bottom: none; }
-
+        
         /* Mobile Sidebar */
         @media (max-width: 1023px) {
             #sidebar {
@@ -189,12 +181,52 @@
         }
         @media (min-width: 1024px) { .mobile-menu-btn { display: none; } }
         
+        /* PRINT SPECIFIC STYLES - FIXES THE ISSUE */
         @media print {
-            body { background: white; }
-            #invoice-print-area, #payroll-print-area { visibility: visible; position: absolute; left: 0; top: 0; width: 100%; background: white; padding: 20px; z-index: 9999; }
+            body { 
+                background: white !important; 
+                -webkit-print-color-adjust: exact; 
+                print-color-adjust: exact;
+            }
+            /* Hide everything by default */
             body * { visibility: hidden; }
-            #invoice-print-area *, #payroll-print-area * { visibility: visible; }
+            
+            /* Show only the print areas */
+            #invoice-print-area, #invoice-print-area *,
+            #payroll-print-area, #payroll-print-area * { 
+                visibility: visible; 
+            }
+
+            /* Positioning */
+            #invoice-print-area, #payroll-print-area {
+                position: absolute;
+                left: 0;
+                top: 0;
+                width: 100%;
+                margin: 0;
+                padding: 20px;
+                background: white !important;
+                border: none !important;
+                box-shadow: none !important;
+                z-index: 9999;
+            }
+            
+            /* Hide UI elements during print */
             .no-print { display: none !important; }
+
+            /* Ensure Inputs Print correctly by removing styling and borders */
+            input, select, textarea {
+                border: none !important;
+                background: transparent !important;
+                box-shadow: none !important;
+                padding: 0 !important;
+                margin: 0 !important;
+                font-weight: bold;
+                color: #000 !important;
+                -webkit-appearance: none;
+            }
+            /* Specific fix for placeholders not printing */
+            ::placeholder { color: transparent; }
         }
 
         /* PDF Styles */
@@ -631,7 +663,7 @@
 
     <div id="payroll-modal" class="fixed inset-0 hidden items-center justify-center z-50 p-2 sm:p-4" style="background-color: rgba(0,0,0,0.5); backdrop-filter: blur(5px);">
         <div class="glass modal-inner rounded-2xl shadow-2xl w-full max-w-[900px] max-h-[90vh] overflow-y-auto flex flex-col">
-            <div class="p-5 border-b border-slate-200/60 flex justify-between items-center bg-white/40 rounded-t-2xl">
+            <div class="p-5 border-b border-slate-200/60 flex justify-between items-center bg-white/40 rounded-t-2xl no-print">
                 <div>
                      <h3 class="font-bold text-xl text-slate-800">Generate Payroll Slip</h3>
                      <p class="text-xs text-slate-500">Create a new slip for an employee.</p>
@@ -862,6 +894,24 @@
                 return null;
             }
         }
+        
+        async function apiDelete(endpoint, id) {
+            try {
+                const response = await fetch(`${API_BASE}/${endpoint}?id=${id}`, {
+                    method: 'DELETE'
+                });
+                const result = await response.json();
+                if (result.success) {
+                    showSaveIndicator();
+                    return true;
+                }
+                throw new Error(result.error);
+            } catch (error) {
+                console.error(`API DELETE ${endpoint} error:`, error);
+                showSaveIndicator(true);
+                return false;
+            }
+        }
 
         function showSaveIndicator(isError = false) {
             const indicator = document.getElementById('save-indicator');
@@ -995,13 +1045,31 @@
         // --- PDF EXPORT FUNCTION ---
         function exportToPDF(viewId) {
             closeExportDropdown();
-            const element = document.getElementById('view-' + viewId);
+            
+            // SPECIAL HANDLING FOR PAYROLL:
+            // If we are exporting "payroll", check if the modal is open. 
+            // If yes, export the MODAL content (the slip). If no, export the TABLE.
+            let element;
+            const modal = document.getElementById('payroll-modal');
+            const isPayrollModalOpen = !modal.classList.contains('hidden');
+
+            if (viewId === 'payroll' && isPayrollModalOpen) {
+                // Export the SLIP
+                element = document.getElementById('payroll-print-area');
+            } else {
+                // Export the TABLE (or other view)
+                element = document.getElementById('view-' + viewId);
+            }
+
             if (!element) return;
 
             let wasHidden = false;
-            if (element.classList.contains('hidden')) {
-                wasHidden = true;
-                element.classList.remove('hidden');
+            // Only check hidden if it's NOT the modal print area (which is inside a hidden modal wrapper)
+            if (viewId !== 'payroll' || !isPayrollModalOpen) {
+                if (element.classList.contains('hidden')) {
+                    wasHidden = true;
+                    element.classList.remove('hidden');
+                }
             }
 
             element.classList.add('pdf-mode');
@@ -1057,8 +1125,9 @@
         function renderPayrollTable() {
             const tbody = document.getElementById('payroll-body');
             tbody.innerHTML = '';
-            payrollRecords.forEach(record => {
+            payrollRecords.forEach((record, index) => {
                 const tr = document.createElement('tr');
+                tr.setAttribute('data-id', record.id); // Add ID for deletion
                 tr.className = "hover:bg-white/20 transition-colors";
                 tr.innerHTML = `
                     <td class="px-4 py-3 border-r border-slate-200/60 text-slate-700">${record.payout_date || record.payoutDate}</td>
@@ -1066,14 +1135,32 @@
                     <td class="px-4 py-3 border-r border-slate-200/60 text-slate-600">${record.role_position || record.role}</td>
                     <td class="px-4 py-3 border-r border-slate-200/60 text-slate-600">${record.pay_period || record.period}</td>
                     <td class="px-4 py-3 text-right border-r border-slate-200/60 font-bold text-[#34b0e5]">${formatMoney(record.total_payout || record.total)}</td>
-                    <td class="px-2 py-3 text-center no-print">
-                        <button class="text-slate-400 hover:text-blue-500 transition-colors">
-                           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path></svg>
+                    <td class="px-2 py-3 text-center no-print flex justify-center gap-2">
+                         <button onclick="deletePayrollRow(this)" class="text-gray-400 hover:text-red-500 transition-colors" title="Delete">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
                         </button>
                     </td>
                 `;
                 tbody.appendChild(tr);
             });
+        }
+        
+        // NEW DELETE FUNCTION FOR PAYROLL
+        async function deletePayrollRow(btn) {
+            if(!confirm("Are you sure you want to delete this payroll record?")) return;
+
+            const tr = btn.closest('tr');
+            const id = tr.getAttribute('data-id');
+            
+            // 1. Delete from Backend
+            const success = await apiDelete('payroll', id);
+            
+            if (success) {
+                // 2. Remove from Local Array
+                payrollRecords = payrollRecords.filter(r => r.id !== id);
+                // 3. Remove from UI
+                tr.remove();
+            }
         }
 
         async function saveAndPrintPayroll() {
@@ -1091,7 +1178,7 @@
             const basePay = rate * hours;
             const total = basePay + bonus - deductions;
 
-            // 1. Trigger Print
+            // 1. Trigger Print (Browser will handle the input values now)
             window.print();
 
             // 2. Save detailed payroll record to Backend
