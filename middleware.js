@@ -1,33 +1,32 @@
+// middleware.js
+
+import { NextResponse } from 'next/server';
+
 export const config = {
-  // Matcher: Protect the dashboard, the html file, and all API routes
-  matcher: ['/', '/index.html', '/api/:path*'],
+  matcher: [
+    /*
+     * Match all request paths except for the ones starting with:
+     * - api/auth (Login API)
+     * - _next/static (Next.js internals)
+     * - _next/image (Next.js internals)
+     * - favicon.ico (browser icon)
+     * - GN ICON.png (your logo)
+     * - login.html (the login page itself)
+     */
+    '/((?!api/auth|_next/static|_next/image|favicon.ico|GN%20ICON.png|login.html).*)',
+  ],
 };
 
 export default function middleware(request) {
-  // 1. Get the Authorization header from the request
-  const basicAuth = request.headers.get('authorization');
+  // 1. Check if the user has the 'auth_token' cookie
+  const authCookie = request.cookies.get('auth_token');
 
-  if (basicAuth) {
-    // 2. Decode the Base64 username:password
-    const authValue = basicAuth.split(' ')[1];
-    // atob decodes Base64 in the Edge Runtime
-    const [user, pwd] = atob(authValue).split(':');
-
-    // 3. Check credentials against Environment Variables
-    if (user === process.env.AUTH_USER && pwd === process.env.AUTH_PASS) {
-      // Authentication successful, allow the request to pass
-      return new Response(null, {
-        headers: { 'x-middleware-next': '1' },
-      });
-    }
+  // 2. If cookie exists and is valid, let them pass
+  if (authCookie && authCookie.value === 'valid-session') {
+    return NextResponse.next();
   }
 
-  // 4. If no auth or wrong password, return 401 to trigger the browser popup
-  return new Response('Access Denied: Please log in.', {
-    status: 401,
-    headers: {
-      // This header triggers the browser's native login prompt
-      'WWW-Authenticate': 'Basic realm="GN Finance Tracker"',
-    },
-  });
+  // 3. If no cookie, redirect them to the login page
+  const loginUrl = new URL('/login.html', request.url);
+  return NextResponse.redirect(loginUrl);
 }
