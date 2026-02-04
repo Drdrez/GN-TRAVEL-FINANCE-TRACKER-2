@@ -1,32 +1,43 @@
 // middleware.js
 
-import { NextResponse } from 'next/server';
-
 export const config = {
-  matcher: [
-    /*
-     * Match all request paths except for the ones starting with:
-     * - api/auth (Login API)
-     * - _next/static (Next.js internals)
-     * - _next/image (Next.js internals)
-     * - favicon.ico (browser icon)
-     * - GN ICON.png (your logo)
-     * - login.html (the login page itself)
-     */
-    '/((?!api/auth|_next/static|_next/image|favicon.ico|GN%20ICON.png|login.html).*)',
-  ],
+  // Only run this middleware on the dashboard page and API routes.
+  // This prevents it from blocking static assets like your icon (GN ICON.png)
+  // if you want those to remain public, though usually protecting everything is safer.
+  matcher: ['/', '/index.html', '/api/:path*'],
 };
 
 export default function middleware(request) {
-  // 1. Check if the user has the 'auth_token' cookie
-  const authCookie = request.cookies.get('auth_token');
+  // 1. Get the Authorization header
+  const basicAuth = request.headers.get('authorization');
 
-  // 2. If cookie exists and is valid, let them pass
-  if (authCookie && authCookie.value === 'valid-session') {
-    return NextResponse.next();
+  if (basicAuth) {
+    // 2. The header comes as "Basic base64string". Split it to get the token.
+    const authValue = basicAuth.split(' ')[1];
+    
+    // 3. Decode the Base64 string "username:password"
+    // 'atob' is a standard function available in Vercel Edge Runtime.
+    const [user, pwd] = atob(authValue).split(':');
+
+    // 4. Check against your Environment Variables
+    // Make sure these match what you set in Vercel!
+    if (user === process.env.AUTH_USER && pwd === process.env.AUTH_PASS) {
+      // Success: Allow the request to continue to the site
+      return new Response(null, {
+        status: 200,
+        headers: {
+          'x-middleware-next': '1', // Internal Vercel header to pass request
+        },
+      });
+    }
   }
 
-  // 3. If no cookie, redirect them to the login page
-  const loginUrl = new URL('/login.html', request.url);
-  return NextResponse.redirect(loginUrl);
+  // 5. If not authenticated (or wrong password), force the browser popup
+  return new Response('Auth Required.', {
+    status: 401,
+    headers: {
+      // This strict header forces the browser to show the login prompt
+      'WWW-Authenticate': 'Basic realm="Secure Finance Dashboard"',
+    },
+  });
 }
